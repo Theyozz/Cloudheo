@@ -1,0 +1,29 @@
+# --- Node / Next.js (frontend) ---
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+
+# --- Python / FastAPI (backend) ---
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.egg-info/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+
+# --- Environment / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- OS / editors ---
+.DS_Store
+.vscode/
+.idea/
+
+# --- Logs ---
+*.log
