@@ -1,5 +1,8 @@
 # Cloudheo
 
+[![Backend](https://github.com/Theyozz/Cloudheo/actions/workflows/backend.yml/badge.svg)](https://github.com/Theyozz/Cloudheo/actions/workflows/backend.yml)
+[![Frontend](https://github.com/Theyozz/Cloudheo/actions/workflows/frontend.yml/badge.svg)](https://github.com/Theyozz/Cloudheo/actions/workflows/frontend.yml)
+
 **Cloudheo detects, explains and eliminates unnecessary AWS spend.**
 
 A B2B FinOps / Cloud Cost Optimization SaaS, initially focused on AWS. Unlike a

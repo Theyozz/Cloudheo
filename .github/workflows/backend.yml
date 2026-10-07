@@ -1,0 +1,56 @@
+name: Backend
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: cloudheo
+          POSTGRES_PASSWORD: cloudheo
+          POSTGRES_DB: cloudheo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - run: pip install -r requirements.txt
+
+      # Validates the migrations actually apply cleanly against a real
+      # Postgres, not just that the Python imports work.
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql+psycopg2://cloudheo:cloudheo@localhost:5432/cloudheo
+        run: alembic upgrade head
+
+      - name: Run tests
+        run: pytest -q
