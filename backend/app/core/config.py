@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = "dev-only-change-me-in-production"
     JWT_EXPIRE_MINUTES: int = 60 * 24
 
+    # For the AI explanation service (app/services/ai). Only ever narrates
+    # numbers the FinOps engine already computed — never used for the
+    # calculations themselves.
+    ANTHROPIC_API_KEY: str = ""
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]

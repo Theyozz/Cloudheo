@@ -13,6 +13,8 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.db import Base, get_db
 from app.main import app
+from app.services.ai import get_ai_provider
+from app.services.ai.stub_provider import StubExplanationProvider
 
 TEST_USER_EMAIL = "test@cloudheo.dev"
 TEST_USER_PASSWORD = "testpassword123"
@@ -37,6 +39,9 @@ def _new_test_client() -> TestClient:
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
+    # Never call the real Claude API from automated tests — see
+    # tests/test_ai.py for the rationale (speed, determinism, no required key).
+    app.dependency_overrides[get_ai_provider] = lambda: StubExplanationProvider()
     return TestClient(app)
 
 

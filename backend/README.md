@@ -44,15 +44,14 @@ app/
     │   ├── pricing.py           Static, documented-approximate pricing
     │   ├── environment.py       Non-production detection (tags/name)
     │   └── rules.py              The rules themselves
-    └── ai/                   AI explanation service (not started — Sprint 5)
+    └── ai/                   AI explanation service
+        ├── base.py              ExplanationProvider interface
+        ├── claude_provider.py   Real implementation (Claude Haiku 5.5)
+        └── stub_provider.py     No-network fake, used in tests
 alembic/                  Migrations
 tests/                    pytest suite, mirrors app/ structure
 scripts/                  One-off dev utilities (e.g. check_aws_identity.py)
 ```
-
-`services/ai/` is currently empty — a placeholder for work that hasn't
-started yet, kept because the structure is intentional, but with no dead
-files inside it.
 
 ## Setup
 
@@ -71,6 +70,7 @@ Copy `../.env.example` to `.env` in this directory and fill in:
 | `AWS_REGION` | Default region for the AssumeRole session |
 | `CORS_ORIGINS` | Allowed frontend origin(s) |
 | `JWT_SECRET_KEY` | Signs login sessions — generate with `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`. The in-code default is an obvious placeholder, fine for local dev only |
+| `ANTHROPIC_API_KEY` | From `console.anthropic.com` (a developer account, separate from a claude.ai subscription) — powers `POST /ai/explain`. Billed pay-as-you-go by token, not a flat fee; Haiku calls for this feature cost a small fraction of a cent each |
 
 ### Database
 
@@ -121,6 +121,7 @@ admin account" or "sign in" based on `GET /auth/status`.
 | `POST /finops/recommendations` | ✓ | Runs the rules engine over a fresh scan |
 | `POST` / `GET` / `DELETE /aws/connect` | ✓ | Store, read or remove the currently connected AWS account |
 | `GET /dashboard/summary` | ✓ | Cost + recommendations for the connected account, in one call |
+| `POST /ai/explain` | ✓ | Turns one recommendation's numbers into a plain-language explanation (Claude Haiku) |
 
 ## FinOps rules engine
 
@@ -137,6 +138,21 @@ Deterministic, not AI — every number is traceable back to AWS data
 
 Pricing is a static, documented approximation (`app/services/finops/pricing.py`)
 — swap for the AWS Pricing API once cent-level accuracy matters.
+
+## AI explanation service
+
+Narrates a recommendation's already-computed numbers in plain language — it
+never calculates or invents a figure itself (`app/services/ai/`). Provider
+is swappable behind `ExplanationProvider`; the only implementation today is
+Claude Haiku 5.5, chosen because this is short, factual text generation, not
+a task that needs a larger model. Bundled into the Cloudheo subscription
+(not bring-your-own-key) — the target customer (SMEs with no dedicated
+FinOps/technical team) shouldn't need their own LLM API account, and the
+per-call cost is negligible (a small fraction of a cent on Haiku pricing).
+
+Tests use `StubExplanationProvider` (no network call) via a FastAPI
+dependency override — same pattern as mocking AWS with `moto`, for the same
+reasons: speed, determinism, and no required API key to run `pytest`.
 
 ## AWS access model
 

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.ai import router as ai_router
 from app.api.auth import router as auth_router
 from app.api.aws import router as aws_router
 from app.api.connect import router as connect_router
@@ -29,3 +30,4 @@ app.include_router(resources_router)
 app.include_router(finops_router)
 app.include_router(connect_router)
 app.include_router(dashboard_router)
+app.include_router(ai_router)
