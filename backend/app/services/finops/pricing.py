@@ -45,6 +45,40 @@ EC2_DOWNSIZE: dict[str, str] = {
 
 EBS_GP3_PRICE_PER_GB_MONTH = 0.088
 
+# AWS bills EBS snapshots on the actual unique data stored, which the
+# DescribeSnapshots API does not expose — only the source volume's full size
+# is available. Using that size is therefore an UPPER BOUND, not an exact
+# figure: a mostly-empty volume's snapshot is billed far below this estimate.
+EBS_SNAPSHOT_PRICE_PER_GB_MONTH = 0.05
+
+RDS_HOURLY_PRICE: dict[str, float] = {
+    "db.t3.micro": 0.018,
+    "db.t3.small": 0.036,
+    "db.t3.medium": 0.072,
+    "db.t3.large": 0.144,
+    "db.t3.xlarge": 0.288,
+    "db.m5.large": 0.19,
+    "db.m5.xlarge": 0.38,
+    "db.m5.2xlarge": 0.76,
+    "db.r5.large": 0.24,
+    "db.r5.xlarge": 0.48,
+}
+
+RDS_DOWNSIZE: dict[str, str] = {
+    "db.t3.xlarge": "db.t3.large",
+    "db.t3.large": "db.t3.medium",
+    "db.t3.medium": "db.t3.small",
+    "db.t3.small": "db.t3.micro",
+    "db.m5.2xlarge": "db.m5.xlarge",
+    "db.m5.xlarge": "db.m5.large",
+    "db.r5.xlarge": "db.r5.large",
+}
+
+# A non-production resource running 24/7 could instead run on a business-hours
+# schedule. Used by the non-prod scheduling rule.
+NON_PROD_SCHEDULE_HOURS_PER_DAY = 12
+NON_PROD_SCHEDULE_DAYS_PER_WEEK = 5
+
 
 def ec2_monthly_cost(instance_type: str) -> float | None:
     hourly = EC2_HOURLY_PRICE.get(instance_type)
@@ -53,5 +87,21 @@ def ec2_monthly_cost(instance_type: str) -> float | None:
     return round(hourly * HOURS_PER_MONTH, 2)
 
 
+def rds_monthly_cost(instance_class: str) -> float | None:
+    hourly = RDS_HOURLY_PRICE.get(instance_class)
+    if hourly is None:
+        return None
+    return round(hourly * HOURS_PER_MONTH, 2)
+
+
 def ebs_monthly_cost(size_gb: int) -> float:
     return round(size_gb * EBS_GP3_PRICE_PER_GB_MONTH, 2)
+
+
+def ebs_snapshot_monthly_cost_upper_bound(volume_size_gb: int) -> float:
+    return round(volume_size_gb * EBS_SNAPSHOT_PRICE_PER_GB_MONTH, 2)
+
+
+def non_prod_scheduled_monthly_hours() -> float:
+    weeks_per_month = HOURS_PER_MONTH / (24 * 7)
+    return round(NON_PROD_SCHEDULE_HOURS_PER_DAY * NON_PROD_SCHEDULE_DAYS_PER_WEEK * weeks_per_month, 1)

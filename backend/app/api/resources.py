@@ -11,8 +11,9 @@ router = APIRouter(prefix="/aws", tags=["aws"])
 
 @router.post("/resources", response_model=ResourceInventoryResponse)
 def get_resources(payload: ResourceInventoryRequest):
-    """Inventory EC2 instances, EBS volumes and RDS instances for a customer
-    account, enriched with CloudWatch CPU utilization for running resources.
+    """Inventory EC2 instances, EBS volumes, EBS snapshots and RDS instances
+    for a customer account, enriched with CloudWatch CPU utilization for
+    running resources.
     """
     try:
         creds = assume_role(role_arn=payload.role_arn, external_id=payload.external_id)

@@ -21,6 +21,9 @@ const PLACEHOLDER_RECOMMENDATIONS_COUNT = 34;
 const CATEGORY_LABEL_KEYS: Record<string, TranslationKey> = {
   RIGHTSIZING: "rec_category_rightsizing",
   UNATTACHED_VOLUME: "rec_category_unattached_volume",
+  NON_PROD_SCHEDULING: "rec_category_non_prod_scheduling",
+  STOPPED_INSTANCE_STORAGE: "rec_category_stopped_instance_storage",
+  ORPHANED_SNAPSHOT: "rec_category_orphaned_snapshot",
 };
 
 export default function DashboardPage() {

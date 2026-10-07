@@ -34,7 +34,12 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
 
         regions = [account.region] if account.region else ec2.list_regions(session)
         inventory = fetch_inventory(session, regions)
-        recommendations = evaluate_all(inventory["ec2_instances"], inventory["ebs_volumes"])
+        recommendations = evaluate_all(
+            inventory["ec2_instances"],
+            inventory["ebs_volumes"],
+            inventory["rds_instances"],
+            inventory["ebs_snapshots"],
+        )
     except (AssumeRoleError, ClientError):
         # The account was connected successfully before; a transient AWS
         # error shouldn't take the whole dashboard down — show what we can.

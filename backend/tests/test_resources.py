@@ -6,7 +6,7 @@ from moto import mock_aws
 os.environ.setdefault("AWS_ACCESS_KEY_ID", "testing")
 os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "testing")
 
-from app.services.aws import ebs, ec2, rds  # noqa: E402
+from app.services.aws import ebs, ec2, rds, snapshots  # noqa: E402
 from app.services.aws.cloudwatch import get_ec2_cpu_utilization  # noqa: E402
 
 REGION = "eu-west-1"
@@ -43,6 +43,25 @@ def test_list_volumes_detects_unattached():
     assert len(volumes) == 1
     assert volumes[0]["size_gb"] == 20
     assert volumes[0]["attached"] is False
+    assert volumes[0]["attached_instance_id"] is None
+
+
+@mock_aws
+def test_list_volumes_includes_attached_instance_id():
+    client = boto3.client("ec2", region_name=REGION)
+    image_id = client.describe_images()["Images"][0]["ImageId"]
+    instance = client.run_instances(ImageId=image_id, MinCount=1, MaxCount=1, InstanceType="t3.micro")[
+        "Instances"
+    ][0]
+    volume = client.create_volume(Size=10, AvailabilityZone=f"{REGION}a")
+    client.attach_volume(VolumeId=volume["VolumeId"], InstanceId=instance["InstanceId"], Device="/dev/sdf")
+
+    session = boto3.Session(region_name=REGION)
+    volumes = ebs.list_volumes(session, REGION)
+
+    attached = next(v for v in volumes if v["volume_id"] == volume["VolumeId"])
+    assert attached["attached"] is True
+    assert attached["attached_instance_id"] == instance["InstanceId"]
 
 
 @mock_aws
@@ -71,3 +90,24 @@ def test_cpu_utilization_returns_none_without_data():
     result = get_ec2_cpu_utilization(session, REGION, "i-doesnotexist")
 
     assert result is None
+
+
+@mock_aws
+def test_list_snapshots_maps_fields_correctly():
+    # moto's describe_snapshots ignores the OwnerIds=["self"] filter and also
+    # returns ~479 fake snapshots it auto-generates for its built-in AMI
+    # catalog (verified against real AWS: the real API filters correctly).
+    # So this looks up our own snapshot by ID instead of asserting a count.
+    client = boto3.client("ec2", region_name=REGION)
+    volume = client.create_volume(Size=30, AvailabilityZone=f"{REGION}a")
+    snap = client.create_snapshot(VolumeId=volume["VolumeId"], TagSpecifications=[
+        {"ResourceType": "snapshot", "Tags": [{"Key": "Name", "Value": "my-snapshot"}]}
+    ])
+
+    session = boto3.Session(region_name=REGION)
+    results = snapshots.list_snapshots(session, REGION)
+
+    mine = next(s for s in results if s["snapshot_id"] == snap["SnapshotId"])
+    assert mine["volume_id"] == volume["VolumeId"]
+    assert mine["volume_size_gb"] == 30
+    assert mine["tags"] == {"Name": "my-snapshot"}

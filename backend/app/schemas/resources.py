@@ -22,6 +22,17 @@ class EbsVolume(BaseModel):
     size_gb: int
     state: str
     attached: bool
+    attached_instance_id: str | None = None
+    region: str
+    tags: dict[str, str]
+
+
+class EbsSnapshot(BaseModel):
+    snapshot_id: str
+    volume_id: str
+    volume_size_gb: int
+    state: str
+    start_time: str
     region: str
     tags: dict[str, str]
 
@@ -43,3 +54,4 @@ class ResourceInventoryResponse(BaseModel):
     ec2_instances: list[Ec2Instance]
     ebs_volumes: list[EbsVolume]
     rds_instances: list[RdsInstance]
+    ebs_snapshots: list[EbsSnapshot]

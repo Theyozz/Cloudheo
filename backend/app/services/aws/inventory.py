@@ -1,11 +1,12 @@
-"""Combined AWS resource inventory — EC2 + EBS + RDS, enriched with
-CloudWatch CPU utilization. Shared by the raw resource-listing endpoint and
-the FinOps rules engine, so the scan logic exists in exactly one place.
+"""Combined AWS resource inventory — EC2 + EBS + RDS + EBS snapshots,
+enriched with CloudWatch CPU utilization. Shared by the raw resource-listing
+endpoint and the FinOps rules engine, so the scan logic exists in exactly
+one place.
 """
 
 import boto3
 
-from app.services.aws import ebs, ec2, rds
+from app.services.aws import ebs, ec2, rds, snapshots
 from app.services.aws.cloudwatch import get_ec2_cpu_utilization, get_rds_cpu_utilization
 
 
@@ -13,6 +14,7 @@ def fetch_inventory(session: boto3.Session, regions: list[str]) -> dict:
     ec2_instances: list[dict] = []
     ebs_volumes: list[dict] = []
     rds_instances: list[dict] = []
+    ebs_snapshots: list[dict] = []
 
     for region in regions:
         for instance in ec2.list_instances(session, region):
@@ -28,6 +30,7 @@ def fetch_inventory(session: boto3.Session, regions: list[str]) -> dict:
             )
 
         ebs_volumes.extend(ebs.list_volumes(session, region))
+        ebs_snapshots.extend(snapshots.list_snapshots(session, region))
 
         for db in rds.list_instances(session, region):
             cpu = None
@@ -45,4 +48,5 @@ def fetch_inventory(session: boto3.Session, regions: list[str]) -> dict:
         "ec2_instances": ec2_instances,
         "ebs_volumes": ebs_volumes,
         "rds_instances": rds_instances,
+        "ebs_snapshots": ebs_snapshots,
     }

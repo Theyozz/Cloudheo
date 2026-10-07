@@ -24,4 +24,9 @@ def get_recommendations(payload: ResourceInventoryRequest):
     except ClientError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    return evaluate_all(inventory["ec2_instances"], inventory["ebs_volumes"])
+    return evaluate_all(
+        inventory["ec2_instances"],
+        inventory["ebs_volumes"],
+        inventory["rds_instances"],
+        inventory["ebs_snapshots"],
+    )
