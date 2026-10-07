@@ -35,6 +35,22 @@ const translations = {
     rec_category_rightsizing: "Rightsizing",
     rec_category_non_prod_scheduling: "Non-production scheduling",
     rec_category_unattached_volume: "Unattached volume",
+    connected_badge: "Connected · AWS account {account}",
+    disconnect_button: "Disconnect",
+    connect_form_role_arn_label: "Read-only role ARN",
+    connect_form_advanced: "Advanced options",
+    connect_form_external_id_label: "External ID (optional)",
+    connect_form_region_label: "Restrict to a single region (optional)",
+    connect_form_submit: "Validate & connect",
+    connect_form_cancel: "Cancel",
+    connect_form_connecting: "Connecting…",
+    loading_text: "Loading…",
+    no_recommendations: "No recommendations yet.",
+    simulator_title: "Savings simulator",
+    simulator_selected: "{count} selected",
+    simulator_current_spend: "Current spend",
+    simulator_estimated_savings: "Estimated savings",
+    simulator_new_spend: "New estimated spend",
   },
   fr: {
     nav_dashboard: "Tableau de bord",
@@ -64,10 +80,26 @@ const translations = {
     rec_category_rightsizing: "Redimensionnement",
     rec_category_non_prod_scheduling: "Planification hors production",
     rec_category_unattached_volume: "Volume non attaché",
+    connected_badge: "Connecté · compte AWS {account}",
+    disconnect_button: "Déconnecter",
+    connect_form_role_arn_label: "ARN du rôle en lecture seule",
+    connect_form_advanced: "Options avancées",
+    connect_form_external_id_label: "External ID (optionnel)",
+    connect_form_region_label: "Restreindre à une seule région (optionnel)",
+    connect_form_submit: "Valider et connecter",
+    connect_form_cancel: "Annuler",
+    connect_form_connecting: "Connexion…",
+    loading_text: "Chargement…",
+    no_recommendations: "Aucune recommandation pour l'instant.",
+    simulator_title: "Simulateur d'économies",
+    simulator_selected: "{count} sélectionnée(s)",
+    simulator_current_spend: "Dépense actuelle",
+    simulator_estimated_savings: "Économies estimées",
+    simulator_new_spend: "Nouvelle dépense estimée",
   },
 } as const;
 
-type TranslationKey = keyof (typeof translations)["en"];
+export type TranslationKey = keyof (typeof translations)["en"];
 
 type LanguageContextValue = {
   lang: Lang;

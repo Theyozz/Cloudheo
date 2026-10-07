@@ -1,22 +1,27 @@
 "use client";
 
 import { useLanguage } from "@/lib/i18n";
+import { formatUsd } from "@/lib/format";
 
 type CategorySaving = {
   category: string;
   amount: number;
 };
 
-function formatEur(amount: number) {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
 export function SavingsByCategory({ data }: { data: CategorySaving[] }) {
   const { t } = useLanguage();
+
+  if (data.length === 0) {
+    return (
+      <div className="rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--surface-1)] p-5">
+        <h2 className="text-sm font-medium text-[color:var(--text-secondary)]">
+          {t("savings_by_category_title")}
+        </h2>
+        <p className="mt-5 text-sm text-[color:var(--text-muted)]">{t("no_recommendations")}</p>
+      </div>
+    );
+  }
+
   const max = Math.max(...data.map((d) => d.amount));
 
   return (
@@ -40,7 +45,7 @@ export function SavingsByCategory({ data }: { data: CategorySaving[] }) {
               />
             </span>
             <span className="w-20 shrink-0 text-right text-sm font-medium tabular-nums">
-              {formatEur(item.amount)}
+              {formatUsd(item.amount)}
             </span>
           </li>
         ))}
