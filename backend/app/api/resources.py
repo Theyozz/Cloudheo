@@ -1,12 +1,13 @@
 from botocore.exceptions import ClientError
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.core.deps import get_current_user
 from app.schemas.resources import ResourceInventoryRequest, ResourceInventoryResponse
 from app.services.aws import ec2
 from app.services.aws.inventory import fetch_inventory
 from app.services.aws.sts import AssumeRoleError, assume_role, session_from_assumed_credentials
 
-router = APIRouter(prefix="/aws", tags=["aws"])
+router = APIRouter(prefix="/aws", tags=["aws"], dependencies=[Depends(get_current_user)])
 
 
 @router.post("/resources", response_model=ResourceInventoryResponse)

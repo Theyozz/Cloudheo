@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { authFetch, parseErrorDetail } from "./auth";
 
 export type ApiRecommendation = {
   resource_id: string;
@@ -24,17 +24,8 @@ export type DashboardSummary = {
   top_recommendations: ApiRecommendation[];
 };
 
-async function parseErrorDetail(res: Response): Promise<string> {
-  try {
-    const body = await res.json();
-    return body.detail ?? res.statusText;
-  } catch {
-    return res.statusText;
-  }
-}
-
 export async function fetchDashboardSummary(): Promise<DashboardSummary> {
-  const res = await fetch(`${API_URL}/dashboard/summary`, { cache: "no-store" });
+  const res = await authFetch("/dashboard/summary");
   if (!res.ok) throw new Error(await parseErrorDetail(res));
   return res.json();
 }
@@ -44,7 +35,7 @@ export async function connectAwsAccount(params: {
   external_id?: string;
   region?: string;
 }): Promise<void> {
-  const res = await fetch(`${API_URL}/aws/connect`, {
+  const res = await authFetch("/aws/connect", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),
@@ -53,6 +44,6 @@ export async function connectAwsAccount(params: {
 }
 
 export async function disconnectAwsAccount(): Promise<void> {
-  const res = await fetch(`${API_URL}/aws/connect`, { method: "DELETE" });
+  const res = await authFetch("/aws/connect", { method: "DELETE" });
   if (!res.ok) throw new Error(await parseErrorDetail(res));
 }

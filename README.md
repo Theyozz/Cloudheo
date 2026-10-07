@@ -29,16 +29,20 @@ employees, mostly on AWS, €5k–50k/month cloud spend, no dedicated FinOps tea
 ## Status
 
 Early MVP, **read-only only** — Cloudheo never modifies or deletes anything in a
-connected AWS account. Current focus: Sprint 2 (AWS data ingestion).
+connected AWS account. Current focus: Sprint 5 (AI explanations) and finishing
+Sprint 6 (multi-tenant auth, audit logs).
 
 | Sprint | Scope | Status |
 |---|---|---|
-| 1 — Foundation | Repo, Next.js, FastAPI, Postgres, local dev setup | ✅ Done |
-| 2 — AWS | AssumeRole, Cost Explorer, EC2/EBS/RDS/CloudWatch | 🟡 In progress (AssumeRole + Cost Explorer live-tested; EC2/EBS/RDS/CloudWatch pending) |
-| 3 — FinOps Engine | Resource/cost models, savings rules, recommendations | ⬜ Not started |
-| 4 — Dashboard | Wire the UI to real data, savings simulator | ⬜ Not started (UI exists with placeholder data) |
+| 1 — Foundation | Repo, Next.js, FastAPI, Postgres, local dev setup, CI | ✅ Done |
+| 2 — AWS | AssumeRole, Cost Explorer, EC2/EBS/RDS/CloudWatch/snapshots | ✅ Done, live-tested |
+| 3 — FinOps Engine | Rightsizing, unattached volumes, orphaned snapshots, stopped-instance storage, non-prod scheduling | ✅ Done, 6 deterministic rules |
+| 4 — Dashboard | Wire the UI to real data, connect/disconnect flow, savings simulator | ✅ Done |
 | 5 — AI | Natural-language explanations, "Ask Cloudheo" | ⬜ Not started |
-| 6 — Beta | Auth, audit logs, security hardening, first prospects | ⬜ Not started |
+| 6 — Beta | Auth ✅ (single admin, JWT) · audit logs ⬜ · multi-tenant Organizations ⬜ · first prospects ⬜ | 🟡 In progress |
+
+CI runs the backend test suite (including Alembic migrations against a real
+Postgres) and the frontend lint/build on every push — see the badges above.
 
 ## Architecture
 
@@ -96,7 +100,7 @@ createdb cloudheo --owner=cloudheo
 cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp ../.env.example .env   # then fill in AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY
+cp ../.env.example .env   # fill in AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / JWT_SECRET_KEY
 alembic upgrade head
 uvicorn app.main:app --reload
 
@@ -122,3 +126,6 @@ for details on each side.
   contextualize numbers that were already computed.
 - **Secrets stay in `.env` files**, which are git-ignored. Never commit real
   AWS keys, database passwords, or API tokens.
+- **The API requires authentication.** Every route except `/health` and
+  `/auth/*` requires a valid JWT. The MVP is single-admin: only one account
+  can ever exist (`POST /auth/register` closes itself after first use).

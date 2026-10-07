@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.auth import router as auth_router
 from app.api.aws import router as aws_router
 from app.api.connect import router as connect_router
 from app.api.dashboard import router as dashboard_router
@@ -22,6 +23,7 @@ app.add_middleware(
 )
 
 app.include_router(health_router)
+app.include_router(auth_router)
 app.include_router(aws_router)
 app.include_router(resources_router)
 app.include_router(finops_router)

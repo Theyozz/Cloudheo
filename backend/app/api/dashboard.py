@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
+from app.core.deps import get_current_user
 from app.models.aws_account import AwsAccount
 from app.schemas.dashboard import CategorySaving, DashboardSummaryResponse
 from app.services.aws import ec2
@@ -11,7 +12,7 @@ from app.services.aws.inventory import fetch_inventory
 from app.services.aws.sts import AssumeRoleError, assume_role, session_from_assumed_credentials
 from app.services.finops.rules import evaluate_all
 
-router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+router = APIRouter(prefix="/dashboard", tags=["dashboard"], dependencies=[Depends(get_current_user)])
 
 TOP_RECOMMENDATIONS_LIMIT = 10
 

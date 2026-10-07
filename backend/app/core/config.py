@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str = ""
     AWS_REGION: str = "eu-west-3"
 
+    # JWT signing secret. The default is an obvious, insecure placeholder —
+    # it is fine for local dev but MUST be overridden (a long random string)
+    # before this is ever exposed beyond localhost.
+    JWT_SECRET_KEY: str = "dev-only-change-me-in-production"
+    JWT_EXPIRE_MINUTES: int = 60 * 24
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]

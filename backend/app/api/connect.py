@@ -2,11 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
+from app.core.deps import get_current_user
 from app.models.aws_account import AwsAccount
 from app.schemas.dashboard import AwsAccountStatus, ConnectAwsAccountRequest
 from app.services.aws.sts import AssumeRoleError, assume_role, get_caller_identity
 
-router = APIRouter(prefix="/aws", tags=["aws"])
+router = APIRouter(prefix="/aws", tags=["aws"], dependencies=[Depends(get_current_user)])
 
 
 def _to_status(account: AwsAccount | None) -> AwsAccountStatus:

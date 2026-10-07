@@ -1,6 +1,7 @@
 from botocore.exceptions import ClientError
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.core.deps import get_current_user
 from app.schemas.aws import TestConnectionRequest, TestConnectionResponse
 from app.schemas.costs import CostSummaryRequest, CostSummaryResponse
 from app.services.aws.cost_explorer import default_date_range, get_cost_by_service
@@ -11,7 +12,7 @@ from app.services.aws.sts import (
     session_from_assumed_credentials,
 )
 
-router = APIRouter(prefix="/aws", tags=["aws"])
+router = APIRouter(prefix="/aws", tags=["aws"], dependencies=[Depends(get_current_user)])
 
 
 @router.post("/test-connection", response_model=TestConnectionResponse)

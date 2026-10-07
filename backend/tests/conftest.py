@@ -14,11 +14,13 @@ from sqlalchemy.pool import StaticPool
 from app.core.db import Base, get_db
 from app.main import app
 
+TEST_USER_EMAIL = "test@cloudheo.dev"
+TEST_USER_PASSWORD = "testpassword123"
 
-@pytest.fixture()
-def client():
-    """A TestClient backed by an isolated in-memory SQLite DB, so tests never
-    touch the real Postgres database."""
+
+def _new_test_client() -> TestClient:
+    """A TestClient backed by its own isolated in-memory SQLite DB, so tests
+    never touch the real Postgres database and never share state."""
     engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -35,7 +37,29 @@ def client():
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
-    yield TestClient(app)
+    return TestClient(app)
+
+
+@pytest.fixture()
+def unauthenticated_client():
+    """For tests of the auth flow itself (register/login/missing token)."""
+    test_client = _new_test_client()
+    yield test_client
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def client():
+    """A pre-authenticated TestClient — the default for tests of protected
+    routes, which is almost everything. Registers and logs in one test user,
+    then attaches its token to every request."""
+    test_client = _new_test_client()
+    test_client.post("/auth/register", json={"email": TEST_USER_EMAIL, "password": TEST_USER_PASSWORD})
+    login_resp = test_client.post("/auth/login", json={"email": TEST_USER_EMAIL, "password": TEST_USER_PASSWORD})
+    token = login_resp.json()["access_token"]
+    test_client.headers.update({"Authorization": f"Bearer {token}"})
+
+    yield test_client
     app.dependency_overrides.clear()
 
 

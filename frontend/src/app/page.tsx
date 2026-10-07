@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BackendStatus } from "@/components/backend-status";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { LoginForm } from "@/components/login-form";
 import { ConnectAwsForm } from "@/components/connect-aws-form";
 import { StatTile } from "@/components/stat-tile";
 import { SavingsByCategory } from "@/components/savings-by-category";
@@ -11,6 +12,7 @@ import { SavingsSimulator } from "@/components/savings-simulator";
 import { useLanguage, type TranslationKey } from "@/lib/i18n";
 import { formatUsd } from "@/lib/format";
 import { fetchDashboardSummary, disconnectAwsAccount, type DashboardSummary } from "@/lib/api";
+import { AuthRequiredError, logout, verifyToken } from "@/lib/auth";
 
 // Placeholder data shown until an AWS account is connected.
 const PLACEHOLDER_SPEND = 17_840;
@@ -27,6 +29,43 @@ const CATEGORY_LABEL_KEYS: Record<string, TranslationKey> = {
 };
 
 export default function DashboardPage() {
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function check() {
+      const ok = await verifyToken();
+      if (!cancelled) {
+        setIsAuthenticated(ok);
+        setAuthChecked(true);
+      }
+    }
+
+    check();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!authChecked) return null;
+
+  if (!isAuthenticated) {
+    return <LoginForm onAuthenticated={() => setIsAuthenticated(true)} />;
+  }
+
+  return (
+    <Dashboard
+      onLoggedOut={() => {
+        logout();
+        setIsAuthenticated(false);
+      }}
+    />
+  );
+}
+
+function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
   const { t } = useLanguage();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,9 +79,15 @@ export default function DashboardPage() {
         setSummary(data);
         setSelectedIds(new Set());
       })
-      .catch(() => setSummary(null))
+      .catch((err) => {
+        if (err instanceof AuthRequiredError) {
+          onLoggedOut();
+          return;
+        }
+        setSummary(null);
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [onLoggedOut]);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,8 +99,13 @@ export default function DashboardPage() {
           setSummary(data);
           setSelectedIds(new Set());
         }
-      } catch {
-        if (!cancelled) setSummary(null);
+      } catch (err) {
+        if (cancelled) return;
+        if (err instanceof AuthRequiredError) {
+          onLoggedOut();
+          return;
+        }
+        setSummary(null);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -65,7 +115,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [onLoggedOut]);
 
   function toggleSelected(resourceId: string) {
     setSelectedIds((prev) => {
@@ -168,6 +218,14 @@ export default function DashboardPage() {
             <BackendStatus />
             <span className="text-[color:var(--border-hairline)]">|</span>
             <LanguageSwitcher />
+            <span className="text-[color:var(--border-hairline)]">|</span>
+            <button
+              type="button"
+              onClick={onLoggedOut}
+              className="text-sm text-[color:var(--text-secondary)] hover:text-[color:var(--foreground)]"
+            >
+              {t("auth_logout")}
+            </button>
           </div>
         </div>
       </header>
