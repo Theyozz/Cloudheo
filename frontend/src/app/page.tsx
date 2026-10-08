@@ -1,213 +1,41 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { BackendStatus } from "@/components/backend-status";
+import Link from "next/link";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { LoginForm } from "@/components/login-form";
-import { ConnectAwsForm } from "@/components/connect-aws-form";
-import { StatTile } from "@/components/stat-tile";
-import { SavingsByCategory } from "@/components/savings-by-category";
-import { TopRecommendations } from "@/components/top-recommendations";
-import { SavingsSimulator } from "@/components/savings-simulator";
 import { useLanguage, type TranslationKey } from "@/lib/i18n";
-import { formatUsd } from "@/lib/format";
-import { fetchDashboardSummary, disconnectAwsAccount, type DashboardSummary } from "@/lib/api";
-import { AuthRequiredError, logout, verifyToken } from "@/lib/auth";
 
-// Placeholder data shown until an AWS account is connected.
-const PLACEHOLDER_SPEND = 17_840;
-const PLACEHOLDER_SAVINGS = 3_240;
-const PLACEHOLDER_SAVINGS_PERCENT = 18.2;
-const PLACEHOLDER_RECOMMENDATIONS_COUNT = 34;
+const CONTACT_EMAIL = "theomaurin875@gmail.com";
+const CONTACT_SUBJECT = encodeURIComponent("Free AWS audit — Cloudheo");
+const MAILTO = `mailto:${CONTACT_EMAIL}?subject=${CONTACT_SUBJECT}`;
 
-const CATEGORY_LABEL_KEYS: Record<string, TranslationKey> = {
-  RIGHTSIZING: "rec_category_rightsizing",
-  UNATTACHED_VOLUME: "rec_category_unattached_volume",
-  NON_PROD_SCHEDULING: "rec_category_non_prod_scheduling",
-  STOPPED_INSTANCE_STORAGE: "rec_category_stopped_instance_storage",
-  ORPHANED_SNAPSHOT: "rec_category_orphaned_snapshot",
+type Step = {
+  titleKey: TranslationKey;
+  descKey: TranslationKey;
+  live: boolean;
 };
 
-export default function DashboardPage() {
-  const [authChecked, setAuthChecked] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+const STEPS: Step[] = [
+  { titleKey: "landing_step_detect_title", descKey: "landing_step_detect_desc", live: true },
+  { titleKey: "landing_step_explain_title", descKey: "landing_step_explain_desc", live: true },
+  { titleKey: "landing_step_simulate_title", descKey: "landing_step_simulate_desc", live: true },
+  { titleKey: "landing_step_approve_title", descKey: "landing_step_approve_desc", live: false },
+  { titleKey: "landing_step_fix_title", descKey: "landing_step_fix_desc", live: false },
+  { titleKey: "landing_step_verify_title", descKey: "landing_step_verify_desc", live: false },
+];
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function check() {
-      const ok = await verifyToken();
-      if (!cancelled) {
-        setIsAuthenticated(ok);
-        setAuthChecked(true);
-      }
-    }
-
-    check();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (!authChecked) return null;
-
-  if (!isAuthenticated) {
-    return <LoginForm onAuthenticated={() => setIsAuthenticated(true)} />;
-  }
-
+function PrimaryButton({ children }: { children: React.ReactNode }) {
   return (
-    <Dashboard
-      onLoggedOut={() => {
-        logout();
-        setIsAuthenticated(false);
-      }}
-    />
+    <a
+      href={MAILTO}
+      className="inline-flex items-center justify-center rounded-md bg-[color:var(--foreground)] px-5 py-2.5 text-sm font-medium text-[color:var(--background)] hover:opacity-90"
+    >
+      {children}
+    </a>
   );
 }
 
-function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
+export default function LandingPage() {
   const { t } = useLanguage();
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [showConnectForm, setShowConnectForm] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
-  const reload = useCallback(() => {
-    setLoading(true);
-    fetchDashboardSummary()
-      .then((data) => {
-        setSummary(data);
-        setSelectedIds(new Set());
-      })
-      .catch((err) => {
-        if (err instanceof AuthRequiredError) {
-          onLoggedOut();
-          return;
-        }
-        setSummary(null);
-      })
-      .finally(() => setLoading(false));
-  }, [onLoggedOut]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const data = await fetchDashboardSummary();
-        if (!cancelled) {
-          setSummary(data);
-          setSelectedIds(new Set());
-        }
-      } catch (err) {
-        if (cancelled) return;
-        if (err instanceof AuthRequiredError) {
-          onLoggedOut();
-          return;
-        }
-        setSummary(null);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [onLoggedOut]);
-
-  function toggleSelected(resourceId: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(resourceId)) next.delete(resourceId);
-      else next.add(resourceId);
-      return next;
-    });
-  }
-
-  function categoryLabel(code: string) {
-    const key = CATEGORY_LABEL_KEYS[code];
-    return key ? t(key) : code;
-  }
-
-  async function handleDisconnect() {
-    await disconnectAwsAccount();
-    reload();
-  }
-
-  const isConnected = summary?.connected ?? false;
-
-  const placeholderSavingsByCategory = [
-    { category: "EC2", amount: 820 },
-    { category: "RDS", amount: 630 },
-    { category: t("category_non_production"), amount: 540 },
-    { category: "EBS", amount: 210 },
-  ];
-
-  const placeholderTopRecommendations = [
-    {
-      resourceId: "i-0abc123",
-      resourceType: "EC2",
-      category: t("rec_category_rightsizing"),
-      monthlySaving: 79,
-      risk: "LOW" as const,
-      confidence: 0.94,
-      explainPayload: null,
-    },
-    {
-      resourceId: "db-staging-02",
-      resourceType: "RDS",
-      category: t("rec_category_non_prod_scheduling"),
-      monthlySaving: 54,
-      risk: "LOW" as const,
-      confidence: 0.88,
-      explainPayload: null,
-    },
-    {
-      resourceId: "vol-0def456",
-      resourceType: "EBS",
-      category: t("rec_category_unattached_volume"),
-      monthlySaving: 23,
-      risk: "LOW" as const,
-      confidence: 0.99,
-      explainPayload: null,
-    },
-    {
-      resourceId: "db-prod-reporting",
-      resourceType: "RDS",
-      category: t("rec_category_rightsizing"),
-      monthlySaving: 61,
-      risk: "MEDIUM" as const,
-      confidence: 0.76,
-      explainPayload: null,
-    },
-  ];
-
-  const spend = isConnected ? summary!.monthly_spend : PLACEHOLDER_SPEND;
-  const savings = isConnected ? summary!.potential_savings : PLACEHOLDER_SAVINGS;
-  const savingsPercent = isConnected ? summary!.savings_percent : PLACEHOLDER_SAVINGS_PERCENT;
-  const recommendationsCount = isConnected
-    ? summary!.recommendations_count
-    : PLACEHOLDER_RECOMMENDATIONS_COUNT;
-
-  const savingsByCategory = isConnected ? summary!.savings_by_category : placeholderSavingsByCategory;
-
-  const topRecommendations = isConnected
-    ? summary!.top_recommendations.map((rec) => ({
-        resourceId: rec.resource_id,
-        resourceType: rec.resource_type,
-        category: categoryLabel(rec.category),
-        monthlySaving: rec.estimated_savings,
-        risk: rec.risk,
-        confidence: rec.confidence,
-        explainPayload: rec,
-      }))
-    : placeholderTopRecommendations;
-
-  const selectedSavings = topRecommendations
-    .filter((rec) => selectedIds.has(rec.resourceId))
-    .reduce((sum, rec) => sum + rec.monthlySaving, 0);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -219,106 +47,98 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
             </span>
             <span className="text-base font-semibold tracking-tight">Cloudheo</span>
           </div>
+          <nav className="hidden items-center gap-6 text-sm text-[color:var(--text-secondary)] sm:flex">
+            <a href="#how" className="hover:text-[color:var(--foreground)]">
+              {t("landing_nav_how")}
+            </a>
+            <a href="#security" className="hover:text-[color:var(--foreground)]">
+              {t("landing_nav_security")}
+            </a>
+          </nav>
           <div className="flex items-center gap-4">
-            <BackendStatus />
-            <span className="text-[color:var(--border-hairline)]">|</span>
             <LanguageSwitcher />
             <span className="text-[color:var(--border-hairline)]">|</span>
-            <button
-              type="button"
-              onClick={onLoggedOut}
-              className="text-sm text-[color:var(--text-secondary)] hover:text-[color:var(--foreground)]"
-            >
-              {t("auth_logout")}
-            </button>
+            <Link href="/app" className="text-sm text-[color:var(--text-secondary)] hover:text-[color:var(--foreground)]">
+              {t("landing_nav_login")}
+            </Link>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{t("dashboard_title")}</h1>
-            <p className="mt-1 text-sm text-[color:var(--text-secondary)]">{t("dashboard_subtitle")}</p>
+      <main className="flex-1">
+        {/* Hero */}
+        <section className="mx-auto max-w-4xl px-6 py-20 text-center sm:py-28">
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">{t("landing_hero_title")}</h1>
+          <p className="mx-auto mt-5 max-w-2xl text-base text-[color:var(--text-secondary)] sm:text-lg">
+            {t("landing_hero_subtitle")}
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <PrimaryButton>{t("landing_cta_primary")}</PrimaryButton>
+            <a href="#how" className="text-sm text-[color:var(--text-secondary)] hover:text-[color:var(--foreground)]">
+              {t("landing_cta_secondary")} ↓
+            </a>
           </div>
-          {!loading && (
-            <span className="shrink-0 rounded-full border border-[color:var(--border-hairline)] px-3 py-1 text-xs text-[color:var(--text-muted)]">
-              {isConnected
-                ? t("connected_badge", { account: summary!.aws_account_id ?? "" })
-                : t("sample_data_badge")}
-            </span>
-          )}
-        </div>
+        </section>
 
-        {/* AWS connection */}
-        <section className="mt-6 rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--surface-1)] p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-medium">{t("connect_aws_title")}</h2>
-              <p className="mt-1 max-w-xl text-sm text-[color:var(--text-secondary)]">
-                {t("connect_aws_description")}
-              </p>
-              {!isConnected && showConnectForm && (
-                <ConnectAwsForm
-                  onConnected={() => {
-                    setShowConnectForm(false);
-                    reload();
-                  }}
-                  onCancel={() => setShowConnectForm(false)}
-                />
-              )}
-            </div>
-            {isConnected ? (
-              <button
-                type="button"
-                onClick={handleDisconnect}
-                className="shrink-0 rounded-md border border-[color:var(--border-hairline)] px-4 py-2 text-sm font-medium text-[color:var(--text-secondary)] hover:text-[color:var(--foreground)]"
-              >
-                {t("disconnect_button")}
-              </button>
-            ) : (
-              !showConnectForm && (
-                <button
-                  type="button"
-                  onClick={() => setShowConnectForm(true)}
-                  className="shrink-0 rounded-md bg-[color:var(--foreground)] px-4 py-2 text-sm font-medium text-[color:var(--background)]"
+        {/* Loop */}
+        <section id="how" className="border-t border-[color:var(--border-hairline)] bg-[color:var(--surface-1)] py-16">
+          <div className="mx-auto max-w-6xl px-6">
+            <h2 className="text-2xl font-semibold tracking-tight">{t("landing_loop_title")}</h2>
+            <p className="mt-2 max-w-2xl text-sm text-[color:var(--text-secondary)]">{t("landing_loop_subtitle")}</p>
+            <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {STEPS.map((step, i) => (
+                <div
+                  key={step.titleKey}
+                  className="rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--background)] p-5"
                 >
-                  {t("connect_aws_button")}
-                </button>
-              )
-            )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-[color:var(--text-muted)]">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    {!step.live && (
+                      <span className="rounded-full border border-[color:var(--border-hairline)] px-2 py-0.5 text-[10px] text-[color:var(--text-muted)]">
+                        {t("landing_step_soon")}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="mt-3 text-sm font-semibold">{t(step.titleKey)}</h3>
+                  <p className="mt-1 text-sm text-[color:var(--text-secondary)]">{t(step.descKey)}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
-        {/* Stat tiles */}
-        <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <StatTile label={t("stat_spend")} value={formatUsd(spend)} />
-          <StatTile
-            label={t("stat_savings")}
-            value={formatUsd(savings)}
-            delta={{
-              text: t("stat_savings_delta", { percent: savingsPercent }),
-              direction: "down",
-              isGood: true,
-            }}
-          />
-          <StatTile label={t("stat_recommendations")} value={String(recommendationsCount)} />
+        {/* Audience */}
+        <section className="mx-auto max-w-4xl px-6 py-16 text-center">
+          <h2 className="text-2xl font-semibold tracking-tight">{t("landing_audience_title")}</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-sm text-[color:var(--text-secondary)]">
+            {t("landing_audience_body")}
+          </p>
         </section>
 
-        {/* Breakdown */}
-        <section className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <SavingsByCategory data={savingsByCategory} />
-          <TopRecommendations data={topRecommendations} selectedIds={selectedIds} onToggle={toggleSelected} />
+        {/* Security */}
+        <section
+          id="security"
+          className="border-t border-[color:var(--border-hairline)] bg-[color:var(--surface-1)] py-16"
+        >
+          <div className="mx-auto max-w-3xl px-6 text-center">
+            <h2 className="text-2xl font-semibold tracking-tight">{t("landing_security_title")}</h2>
+            <p className="mt-3 text-sm text-[color:var(--text-secondary)]">{t("landing_security_body")}</p>
+          </div>
         </section>
 
-        {/* Simulator */}
-        <section className="mt-6">
-          <SavingsSimulator currentSpend={spend} selectedSavings={selectedSavings} selectedCount={selectedIds.size} />
+        {/* Final CTA */}
+        <section className="mx-auto max-w-3xl px-6 py-20 text-center">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("landing_final_cta_title")}</h2>
+          <div className="mt-6">
+            <PrimaryButton>{t("landing_cta_primary")}</PrimaryButton>
+          </div>
         </section>
       </main>
 
       <footer className="border-t border-[color:var(--border-hairline)] py-4">
-        <p className="mx-auto max-w-6xl px-6 text-xs text-[color:var(--text-muted)]">{t("footer")}</p>
+        <p className="mx-auto max-w-6xl px-6 text-xs text-[color:var(--text-muted)]">{t("landing_footer")}</p>
       </footer>
     </div>
   );

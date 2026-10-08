@@ -29,8 +29,8 @@ employees, mostly on AWS, €5k–50k/month cloud spend, no dedicated FinOps tea
 ## Status
 
 Early MVP, **read-only only** — Cloudheo never modifies or deletes anything in a
-connected AWS account. Current focus: Sprint 5 (AI explanations) and finishing
-Sprint 6 (multi-tenant auth, audit logs).
+connected AWS account. Current focus: finishing Sprint 6 (multi-tenant,
+audit logs) and starting to talk to prospects.
 
 | Sprint | Scope | Status |
 |---|---|---|
@@ -38,8 +38,8 @@ Sprint 6 (multi-tenant auth, audit logs).
 | 2 — AWS | AssumeRole, Cost Explorer, EC2/EBS/RDS/CloudWatch/snapshots | ✅ Done, live-tested |
 | 3 — FinOps Engine | Rightsizing, unattached volumes, orphaned snapshots, stopped-instance storage, non-prod scheduling | ✅ Done, 6 deterministic rules |
 | 4 — Dashboard | Wire the UI to real data, connect/disconnect flow, savings simulator | ✅ Done |
-| 5 — AI | Natural-language explanations, "Ask Cloudheo" | ⬜ Not started |
-| 6 — Beta | Auth ✅ (single admin, JWT) · audit logs ⬜ · multi-tenant Organizations ⬜ · first prospects ⬜ | 🟡 In progress |
+| 5 — AI | Per-recommendation natural-language explanations (Claude Haiku) | ✅ Done, live-tested |
+| 6 — Beta | Auth ✅ (single admin, JWT) · landing page ✅ · audit logs ⬜ · multi-tenant Organizations ⬜ · first prospects ⬜ | 🟡 In progress |
 
 CI runs the backend test suite (including Alembic migrations against a real
 Postgres) and the frontend lint/build on every push — see the badges above.

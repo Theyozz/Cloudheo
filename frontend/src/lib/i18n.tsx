@@ -68,6 +68,41 @@ const translations = {
     explain_button: "Explain",
     explain_loading: "Explaining…",
     explain_error: "Couldn't generate an explanation.",
+
+    // Landing page
+    landing_nav_how: "How it works",
+    landing_nav_security: "Security",
+    landing_nav_login: "Sign in",
+    landing_hero_title: "Cloudheo detects, explains and eliminates unnecessary AWS spend.",
+    landing_hero_subtitle:
+      "A FinOps tool for small and mid-size teams without a dedicated cloud cost function. Connect a read-only AWS role and get a clear picture of what you're wasting — in minutes, not a consulting engagement.",
+    landing_cta_primary: "Request a free AWS audit",
+    landing_cta_secondary: "See how it works",
+    landing_loop_title: "How Cloudheo works",
+    landing_loop_subtitle:
+      "Every number is computed by deterministic rules, not guessed by an AI — the explanations just make them easy to read.",
+    landing_step_detect_title: "Detect",
+    landing_step_detect_desc: "Scan your AWS account (read-only) for cost and usage data.",
+    landing_step_explain_title: "Explain",
+    landing_step_explain_desc:
+      "A rule-based engine finds concrete waste — oversized instances, unattached volumes, idle non-prod resources — with every figure traceable back to the source data.",
+    landing_step_simulate_title: "Simulate",
+    landing_step_simulate_desc: "Pick optimizations and preview their combined impact on your bill before doing anything.",
+    landing_step_approve_title: "Approve",
+    landing_step_approve_desc: "Review and approve changes with a human in the loop.",
+    landing_step_fix_title: "Fix",
+    landing_step_fix_desc: "Cloudheo applies the approved, low-risk change for you.",
+    landing_step_verify_title: "Verify",
+    landing_step_verify_desc: "Confirm the expected savings actually showed up on the bill.",
+    landing_step_soon: "Coming soon",
+    landing_audience_title: "Built for teams without a dedicated FinOps function",
+    landing_audience_body:
+      "SMEs and mid-market companies, mostly on AWS, with €5k–50k in monthly cloud spend and a small technical team — not a platform or cost-optimization specialist on staff.",
+    landing_security_title: "Read-only, always — for now",
+    landing_security_body:
+      "Cloudheo connects via AWS STS AssumeRole with short-lived, temporary credentials — never your permanent keys. No Delete, Terminate, Modify, or Update permission is ever requested. Nothing changes in your AWS account without your explicit approval.",
+    landing_final_cta_title: "See what you're actually spending on — for free.",
+    landing_footer: "Cloudheo — read-only MVP",
   },
   fr: {
     nav_dashboard: "Tableau de bord",
@@ -130,6 +165,41 @@ const translations = {
     explain_button: "Expliquer",
     explain_loading: "Explication…",
     explain_error: "Impossible de générer une explication.",
+
+    // Landing page
+    landing_nav_how: "Fonctionnement",
+    landing_nav_security: "Sécurité",
+    landing_nav_login: "Se connecter",
+    landing_hero_title: "Cloudheo détecte, explique et élimine les dépenses cloud inutiles.",
+    landing_hero_subtitle:
+      "Un outil FinOps pour les petites et moyennes équipes sans fonction dédiée aux coûts cloud. Connectez un rôle AWS en lecture seule et obtenez une image claire de ce que vous gaspillez — en quelques minutes, pas en mission de conseil.",
+    landing_cta_primary: "Demander un audit AWS gratuit",
+    landing_cta_secondary: "Voir comment ça marche",
+    landing_loop_title: "Comment fonctionne Cloudheo",
+    landing_loop_subtitle:
+      "Chaque chiffre est calculé par des règles déterministes, jamais deviné par une IA — les explications ne font que les rendre lisibles.",
+    landing_step_detect_title: "Détecter",
+    landing_step_detect_desc: "Analyse de votre compte AWS (lecture seule) : coûts et utilisation.",
+    landing_step_explain_title: "Expliquer",
+    landing_step_explain_desc:
+      "Un moteur à base de règles trouve du gaspillage concret — instances surdimensionnées, volumes non attachés, ressources hors-prod inactives — avec chaque chiffre traçable jusqu'à la donnée source.",
+    landing_step_simulate_title: "Simuler",
+    landing_step_simulate_desc: "Sélectionnez des optimisations et prévisualisez leur impact combiné sur votre facture avant d'agir.",
+    landing_step_approve_title: "Approuver",
+    landing_step_approve_desc: "Validez les changements avec un humain dans la boucle.",
+    landing_step_fix_title: "Corriger",
+    landing_step_fix_desc: "Cloudheo applique pour vous le changement approuvé, à faible risque.",
+    landing_step_verify_title: "Vérifier",
+    landing_step_verify_desc: "Confirme que l'économie attendue s'est bien reflétée sur la facture.",
+    landing_step_soon: "Bientôt disponible",
+    landing_audience_title: "Conçu pour les équipes sans fonction FinOps dédiée",
+    landing_audience_body:
+      "PME et ETI, majoritairement sur AWS, avec 5k–50k€ de dépenses cloud mensuelles et une petite équipe technique — pas de spécialiste de l'optimisation des coûts en interne.",
+    landing_security_title: "Lecture seule, toujours — pour l'instant",
+    landing_security_body:
+      "Cloudheo se connecte via AWS STS AssumeRole, avec des identifiants temporaires et de courte durée — jamais vos clés permanentes. Aucune permission Delete, Terminate, Modify ou Update n'est jamais demandée. Rien ne change dans votre compte AWS sans votre accord explicite.",
+    landing_final_cta_title: "Découvrez gratuitement ce sur quoi vous dépensez vraiment.",
+    landing_footer: "Cloudheo — MVP en lecture seule",
   },
 } as const;
 

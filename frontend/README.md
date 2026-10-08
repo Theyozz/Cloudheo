@@ -1,8 +1,14 @@
 # Cloudheo — Frontend
 
-Next.js dashboard for Cloudheo: AWS spend overview, potential savings, and
-recommendations. Currently renders placeholder data — not yet wired to the
-backend's real AWS/FinOps endpoints.
+Next.js app for Cloudheo: a public landing page plus the authenticated
+dashboard (AWS spend, potential savings, recommendations, savings simulator).
+
+## Routes
+
+| Route | Public? | Content |
+|---|---|---|
+| `/` | Yes | Landing page — pitch, how it works, security, contact CTA |
+| `/app` | Login required | Dashboard — login/register gate, then the real app |
 
 ## Stack
 
@@ -16,17 +22,24 @@ backend's real AWS/FinOps endpoints.
 src/
 ├── app/
 │   ├── layout.tsx        Root layout, fonts, wraps the app in LanguageProvider
-│   ├── page.tsx           Dashboard page
+│   ├── page.tsx            Landing page (public)
+│   ├── app/page.tsx        Dashboard — auth gate (login/register) then the app
 │   └── globals.css        Design tokens (colors, light/dark mode) + Tailwind import
 ├── components/
-│   ├── backend-status.tsx    Live API connectivity indicator (polls GET /health)
-│   ├── language-switcher.tsx EN/FR toggle
-│   ├── stat-tile.tsx          Stat card (label, value, optional delta)
+│   ├── backend-status.tsx     Live API connectivity indicator (polls GET /health)
+│   ├── language-switcher.tsx  EN/FR toggle
+│   ├── login-form.tsx          Register (first run only) / sign in, with a show/hide password toggle
+│   ├── connect-aws-form.tsx    Role ARN (+ external ID / region) to connect an AWS account
+│   ├── stat-tile.tsx           Stat card (label, value, optional delta)
 │   ├── risk-badge.tsx          LOW/MEDIUM/HIGH risk pill
 │   ├── savings-by-category.tsx Horizontal bar list
-│   └── top-recommendations.tsx Recommendation list
+│   ├── top-recommendations.tsx Recommendation list, selectable, with an on-demand "Explain" (AI) per row
+│   └── savings-simulator.tsx   Live total for the currently selected recommendations
 └── lib/
-    └── i18n.tsx            Translation dictionary + React context (see below)
+    ├── i18n.tsx            Translation dictionary + React context (see below)
+    ├── auth.ts              Token storage, login/register/logout, authFetch() wrapper
+    ├── api.ts                Typed calls to the dashboard/AWS/AI endpoints
+    └── format.ts             Shared USD currency formatting
 ```
 
 ## Setup
@@ -45,6 +58,16 @@ npm run dev     # dev server (Turbopack)
 npm run build   # production build
 npm run lint    # ESLint
 ```
+
+## Authentication
+
+`/app` is gated: on mount it calls `GET /auth/me` with the token in
+`localStorage` (`lib/auth.ts`) and shows `LoginForm` if that fails. The
+backend is single-admin — registration only works once — so the form shows
+"create admin account" or "sign in" based on `GET /auth/status`. Every
+protected API call goes through `authFetch()`, which attaches the bearer
+token and throws `AuthRequiredError` on a 401 so the dashboard can drop back
+to the login screen (expired session) without a special case at every call site.
 
 ## Internationalization
 
