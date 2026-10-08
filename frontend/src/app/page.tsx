@@ -153,6 +153,7 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
       monthlySaving: 79,
       risk: "LOW" as const,
       confidence: 0.94,
+      explainPayload: null,
     },
     {
       resourceId: "db-staging-02",
@@ -161,6 +162,7 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
       monthlySaving: 54,
       risk: "LOW" as const,
       confidence: 0.88,
+      explainPayload: null,
     },
     {
       resourceId: "vol-0def456",
@@ -169,6 +171,7 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
       monthlySaving: 23,
       risk: "LOW" as const,
       confidence: 0.99,
+      explainPayload: null,
     },
     {
       resourceId: "db-prod-reporting",
@@ -177,6 +180,7 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
       monthlySaving: 61,
       risk: "MEDIUM" as const,
       confidence: 0.76,
+      explainPayload: null,
     },
   ];
 
@@ -197,6 +201,7 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
         monthlySaving: rec.estimated_savings,
         risk: rec.risk,
         confidence: rec.confidence,
+        explainPayload: rec,
       }))
     : placeholderTopRecommendations;
 

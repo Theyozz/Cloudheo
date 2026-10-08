@@ -65,6 +65,9 @@ const translations = {
     auth_checking: "Checking session…",
     auth_show_password: "Show password",
     auth_hide_password: "Hide password",
+    explain_button: "Explain",
+    explain_loading: "Explaining…",
+    explain_error: "Couldn't generate an explanation.",
   },
   fr: {
     nav_dashboard: "Tableau de bord",
@@ -124,6 +127,9 @@ const translations = {
     auth_checking: "Vérification de la session…",
     auth_show_password: "Afficher le mot de passe",
     auth_hide_password: "Masquer le mot de passe",
+    explain_button: "Expliquer",
+    explain_loading: "Explication…",
+    explain_error: "Impossible de générer une explication.",
   },
 } as const;
 

@@ -47,3 +47,14 @@ export async function disconnectAwsAccount(): Promise<void> {
   const res = await authFetch("/aws/connect", { method: "DELETE" });
   if (!res.ok) throw new Error(await parseErrorDetail(res));
 }
+
+export async function explainRecommendation(recommendation: ApiRecommendation): Promise<string> {
+  const res = await authFetch("/ai/explain", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ recommendation }),
+  });
+  if (!res.ok) throw new Error(await parseErrorDetail(res));
+  const body = await res.json();
+  return body.explanation;
+}
