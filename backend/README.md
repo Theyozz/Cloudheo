@@ -249,8 +249,8 @@ Fixed:
 - Rate limiting extended from login/register to every endpoint that costs money or touches a customer's AWS account per call (table above).
 - Added `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` headers to every response.
 - Bumped `pyjwt` and `python-dotenv` to patch known CVEs (`pip-audit` was clean for both afterwards).
+- **(2026-10-09, follow-up)** Upgraded `fastapi` 0.115.6 → 0.143.0, which pulls `starlette` 1.7.0 (from 0.41.3) and `pytest` 8.3.4 → 9.0.3 — both previously-deferred CVEs. Checked the FastAPI/Starlette release notes for breaking changes between those versions; nothing in scope applies here (no `pydantic.v1` usage, no direct `router.routes` access, JSON requests already send `Content-Type: application/json`, no `OTEL_*` env vars). Full test suite, `pip-audit`, and a live server check (security headers, CORS, rate limiting, auth) all passed unchanged after the upgrade. `pip-audit` now reports zero known vulnerabilities.
 
 Deferred (flagged, not fixed — each needs dedicated attention, not a drive-by change):
-- **`fastapi`/`starlette` have known CVEs patched only in versions far ahead of what's pinned** (`fastapi` 0.115.6 hard-pins `starlette<0.42`; the fixes are in `starlette>=0.47`). Fixing requires a `fastapi` major-version upgrade with its own regression testing — tracked, not done in this pass.
 - **No audit-log UI** — already a known, deliberate scope cut (see Audit logs section).
 - Email enumeration on `POST /auth/register` (409 reveals an email is already registered) — a conscious, common tradeoff for UX, not treated as a finding worth obscuring.
