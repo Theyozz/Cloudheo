@@ -1613,6 +1613,7 @@ svg {
 .good-badge {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   padding: 5px 9px;
   border: 1px solid var(--border-hairline);
@@ -1621,6 +1622,13 @@ svg {
   line-height: 1.4;
   font-weight: 500;
   color: var(--text-secondary);
+}
+
+/* The connection status pill's two possible labels ("AWS not connected" /
+   "AWS non connecté") are close in width but not identical — reserve
+   enough room for either so it doesn't visibly resize on language switch. */
+.dashboard-heading-actions .soft-badge {
+  min-width: 118px;
 }
 
 .good-badge {
@@ -1680,7 +1688,11 @@ svg {
 
 .auth-story-content {
   width: 100%;
-  max-width: 440px;
+  /* 440px let the French headline's second line ("Moins de dépenses.",
+     ~456px wide at this font size) wrap to a 3rd line while the English
+     one fit on 2 — a 62px jump for the whole page on language switch.
+     480px gives every current translation enough room to stay on 2 lines. */
+  max-width: 480px;
   margin: auto;
   padding-top: 70px;
 }
@@ -1826,6 +1838,13 @@ svg {
   gap: 22px;
 }
 
+/* "Log out" / "Déconnexion" — reserve room for the longer French label so
+   the header doesn't visibly resize on language switch. */
+.dashboard-logout {
+  min-width: 112px;
+  justify-content: flex-end;
+}
+
 .dashboard-nav {
   display: flex;
   align-items: center;
@@ -1942,6 +1961,13 @@ svg {
   min-width: 210px;
 }
 
+/* "Connect AWS account" / "Connecter un compte AWS" — the French label is
+   ~25% wider; without this the button visibly grows/shrinks and slides on
+   language switch instead of just re-rendering its text. */
+.connection-row .button-primary {
+  min-width: 215px;
+}
+
 .connection-copy h2 {
   font-size: 14px;
   font-weight: 550;
@@ -1950,6 +1976,10 @@ svg {
 .connection-copy p {
   font-size: 12px;
   line-height: 1.8;
+  /* Reserve 2 lines unconditionally: French (and any future language) can
+     run longer than English and wrap to an extra line, which otherwise
+     pushes every section below down when switching language. */
+  min-height: 2lh;
   color: var(--text-secondary);
   max-width: 650px;
   margin-top: 6px;
