@@ -1,7 +1,8 @@
 import anthropic
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.core.deps import get_current_user
+from app.core.rate_limit import limiter
 from app.schemas.ai import ExplainRequest, ExplainResponse
 from app.services.ai import get_ai_provider
 from app.services.ai.base import ExplanationProvider
@@ -10,7 +11,9 @@ router = APIRouter(prefix="/ai", tags=["ai"], dependencies=[Depends(get_current_
 
 
 @router.post("/explain", response_model=ExplainResponse)
+@limiter.limit("30/hour")
 def explain_recommendation(
+    request: Request,
     payload: ExplainRequest,
     provider: ExplanationProvider = Depends(get_ai_provider),
 ):

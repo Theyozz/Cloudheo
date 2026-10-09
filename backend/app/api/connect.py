@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.deps import get_current_user
+from app.core.rate_limit import limiter
 from app.models.aws_account import AwsAccount
 from app.models.user import User
 from app.schemas.dashboard import AwsAccountStatus, ConnectAwsAccountRequest
@@ -25,7 +26,9 @@ def _to_status(account: AwsAccount | None) -> AwsAccountStatus:
 
 
 @router.post("/connect", response_model=AwsAccountStatus)
+@limiter.limit("20/hour")
 def connect_aws_account(
+    request: Request,
     payload: ConnectAwsAccountRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

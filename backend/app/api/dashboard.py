@@ -1,9 +1,10 @@
 from botocore.exceptions import ClientError
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.deps import get_current_user
+from app.core.rate_limit import limiter
 from app.models.aws_account import AwsAccount
 from app.models.user import User
 from app.schemas.dashboard import CategorySaving, DashboardSummaryResponse
@@ -19,7 +20,8 @@ TOP_RECOMMENDATIONS_LIMIT = 10
 
 
 @router.get("/summary", response_model=DashboardSummaryResponse)
-def get_dashboard_summary(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@limiter.limit("30/minute")
+def get_dashboard_summary(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """One-call summary for the dashboard: spend, potential savings, and
     top recommendations for the organization's currently connected AWS
     account."""

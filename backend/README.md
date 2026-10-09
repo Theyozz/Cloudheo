@@ -23,10 +23,7 @@ app/
 │   ├── health.py          GET /health (public)
 │   ├── auth.py             POST /auth/register, /login, GET /me
 │   ├── audit.py             GET /audit-logs
-│   ├── aws.py              POST /aws/test-connection, POST /aws/costs
 │   ├── connect.py          POST/GET/DELETE /aws/connect (stored AWS account)
-│   ├── resources.py        POST /aws/resources (EC2/EBS/RDS/snapshots)
-│   ├── finops.py           POST /finops/recommendations
 │   └── dashboard.py        GET /dashboard/summary (cost + recommendations, one call)
 ├── core/
 │   ├── config.py           Settings (env vars via pydantic-settings)
@@ -72,7 +69,7 @@ Copy `../.env.example` to `.env` in this directory and fill in:
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Credentials for Cloudheo's own `cloudheo-backend` IAM user — used **only** to call `sts:AssumeRole` into customer accounts, never to access customer resources directly |
 | `AWS_REGION` | Default region for the AssumeRole session |
 | `CORS_ORIGINS` | Allowed frontend origin(s) |
-| `JWT_SECRET_KEY` | Signs login sessions — generate with `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`. The in-code default is an obvious placeholder, fine for local dev only |
+| `JWT_SECRET_KEY` | Signs login sessions — generate with `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`. The in-code default is an obvious placeholder; the app **refuses to start** with it when `ENVIRONMENT` isn't `development` |
 | `ANTHROPIC_API_KEY` | From `console.anthropic.com` (a developer account, separate from a claude.ai subscription) — powers `POST /ai/explain`. Billed pay-as-you-go by token, not a flat fee; Haiku calls for this feature cost a small fraction of a cent each |
 
 ### Database
@@ -117,12 +114,18 @@ Known gap: there is no password-reset flow yet — a user who forgets their
 password is locked out. Not blocking for an internal/first-customer pilot,
 but needed before a self-serve audience.
 
-`POST /auth/login` (10/minute) and `POST /auth/register` (5/hour) are
-rate-limited per IP via `slowapi` (`app/core/rate_limit.py`) — a basic
-defense against password brute-forcing and spam account creation now that
-registration is always open. In-memory storage, so limits reset on restart
-and aren't shared across multiple backend processes; revisit with a shared
-store (e.g. Redis) if Cloudheo ever runs more than one API process.
+All endpoints below that touch AWS or spend money per call are rate-limited
+per IP via `slowapi` (`app/core/rate_limit.py`), in-memory (resets on
+restart, not shared across multiple backend processes — revisit with a
+shared store like Redis if Cloudheo ever runs more than one API process):
+
+| Endpoint | Limit | Why |
+|---|---|---|
+| `POST /auth/login` | 10/minute | Password brute-forcing |
+| `POST /auth/register` | 5/hour | Spam account creation (registration is always open) |
+| `POST /aws/connect` | 20/hour | Each call performs a real AssumeRole against a customer AWS account |
+| `GET /dashboard/summary` | 30/minute | Each call makes several live AWS API calls (Cost Explorer, EC2/RDS/EBS) |
+| `POST /ai/explain` | 30/hour | Each call is a billed Claude API request |
 
 ## API
 
@@ -132,14 +135,30 @@ store (e.g. Redis) if Cloudheo ever runs more than one API process.
 | `POST /auth/register` | — | Create a new organization and its first user |
 | `POST /auth/login` | — | Returns a JWT access token |
 | `GET /auth/me` | ✓ | Current user (includes `organization_id`) |
-| `POST /aws/test-connection` | ✓ | Assumes a customer's `CloudheoReadOnlyRole` and confirms the trust relationship, with no data access |
-| `POST /aws/costs` | ✓ | Total spend + spend by AWS service over a date range (defaults to the last 30 days) |
-| `POST /aws/resources` | ✓ | EC2/EBS/RDS/snapshot inventory, enriched with CloudWatch CPU |
-| `POST /finops/recommendations` | ✓ | Runs the rules engine over a fresh scan |
 | `POST` / `GET` / `DELETE /aws/connect` | ✓ | Store, read or remove the current organization's connected AWS account |
 | `GET /dashboard/summary` | ✓ | Cost + recommendations for the organization's connected account, in one call |
 | `POST /ai/explain` | ✓ | Turns one recommendation's numbers into a plain-language explanation (Claude Haiku) |
 | `GET /audit-logs` | ✓ | Most recent audit log entries for the organization (newest first, capped at 200) |
+
+Every response also carries baseline security headers (`X-Content-Type-Options:
+nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`),
+set in `app/main.py`.
+
+### Removed: ad-hoc AWS scan endpoints
+
+`POST /aws/test-connection`, `POST /aws/costs`, `POST /aws/resources`, and
+`POST /finops/recommendations` existed from an earlier sprint, before AWS
+accounts were stored per organization. They accepted a `role_arn` directly
+from the request body with no check that it belonged to the caller's own
+organization — since Cloudheo's `cloudheo-backend` IAM user can assume
+*any* role named `CloudheoReadOnlyRole` in *any* AWS account, any
+authenticated user (from any organization) could have read another
+organization's AWS cost and resource data by passing that organization's
+role ARN. Unused by the frontend (the real flow is `/aws/connect` +
+`/dashboard/summary`, both scoped by `organization_id`), so removed rather
+than patched — the underlying service functions (`app/services/aws/*`,
+`app/services/finops/rules.py`) are unaffected, since `dashboard.py` already
+called them directly.
 
 ## Audit logs
 
@@ -203,3 +222,18 @@ Every customer creates a role with that exact name in their own account, trustin
 Cloudheo's account ID, with a strictly read-only permission set (Cost Explorer,
 `Describe*` on EC2/RDS/ELB, CloudWatch `Get*`/`List*` — no `Delete`, `Terminate`,
 `Modify`, or `Update` action is ever requested).
+
+## Security audit (2026-10-09)
+
+Fixed:
+- Removed the cross-tenant AWS data leak described above (ad-hoc scan endpoints).
+- `JWT_SECRET_KEY` can no longer be left at its insecure default outside of `ENVIRONMENT=development`.
+- Rate limiting extended from login/register to every endpoint that costs money or touches a customer's AWS account per call (table above).
+- Added `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` headers to every response.
+- Bumped `pyjwt` and `python-dotenv` to patch known CVEs (`pip-audit` was clean for both afterwards).
+
+Deferred (flagged, not fixed — each needs dedicated attention, not a drive-by change):
+- **`fastapi`/`starlette` have known CVEs patched only in versions far ahead of what's pinned** (`fastapi` 0.115.6 hard-pins `starlette<0.42`; the fixes are in `starlette>=0.47`). Fixing requires a `fastapi` major-version upgrade with its own regression testing — tracked, not done in this pass.
+- **No password-reset flow** (see Authentication section above) — a credential-recovery gap, not an exploit path, but blocking for a self-serve audience.
+- **No audit-log UI** — already a known, deliberate scope cut (see Audit logs section).
+- Email enumeration on `POST /auth/register` (409 reveals an email is already registered) — a conscious, common tradeoff for UX, not treated as a finding worth obscuring.

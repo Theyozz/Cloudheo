@@ -6,7 +6,10 @@ development). Nothing secret should ever be hardcoded here.
 
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+INSECURE_JWT_SECRET_KEY = "dev-only-change-me-in-production"
 
 
 class Settings(BaseSettings):
@@ -30,8 +33,11 @@ class Settings(BaseSettings):
 
     # JWT signing secret. The default is an obvious, insecure placeholder —
     # it is fine for local dev but MUST be overridden (a long random string)
-    # before this is ever exposed beyond localhost.
-    JWT_SECRET_KEY: str = "dev-only-change-me-in-production"
+    # before this is ever exposed beyond localhost. Enforced below: anyone
+    # who forgets to set it outside of ENVIRONMENT=development can't start
+    # the app with a secret an attacker can just read off GitHub and use to
+    # forge a valid token for any user.
+    JWT_SECRET_KEY: str = INSECURE_JWT_SECRET_KEY
     JWT_EXPIRE_MINUTES: int = 60 * 24
 
     # For the AI explanation service (app/services/ai). Only ever narrates
@@ -42,6 +48,16 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+
+    @model_validator(mode="after")
+    def _refuse_insecure_secret_outside_dev(self) -> "Settings":
+        if self.ENVIRONMENT != "development" and self.JWT_SECRET_KEY == INSECURE_JWT_SECRET_KEY:
+            raise ValueError(
+                "JWT_SECRET_KEY is still the default placeholder. Set a real secret "
+                "(e.g. python3 -c \"import secrets; print(secrets.token_urlsafe(32))\") "
+                "before running with ENVIRONMENT != development."
+            )
+        return self
 
 
 @lru_cache
