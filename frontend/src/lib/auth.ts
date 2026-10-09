@@ -109,3 +109,31 @@ export async function verifyToken(): Promise<boolean> {
     return false;
   }
 }
+
+export type CurrentUser = {
+  id: string;
+  email: string;
+  organizationId: string;
+  organizationName: string;
+};
+
+export async function getCurrentUser(): Promise<CurrentUser | null> {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(`${API_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const body = await res.json();
+    return {
+      id: body.id,
+      email: body.email,
+      organizationId: body.organization_id,
+      organizationName: body.organization_name,
+    };
+  } catch {
+    return null;
+  }
+}

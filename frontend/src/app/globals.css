@@ -1832,6 +1832,37 @@ svg {
   min-height: 76px;
 }
 
+.dashboard-brand-group {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.dashboard-org {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  margin-left: 16px;
+  padding-left: 16px;
+  border-left: 1px solid var(--border-hairline);
+}
+
+.dashboard-org-name {
+  font-size: 14px;
+  font-weight: 600;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-org-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 .dashboard-header-actions {
   display: flex;
   align-items: center;
@@ -2634,6 +2665,10 @@ svg {
 
   .dashboard-header .header-inner {
     min-height: 70px;
+  }
+
+  .dashboard-org {
+    display: none;
   }
 
   .dashboard-header-actions {

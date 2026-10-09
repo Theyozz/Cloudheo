@@ -95,7 +95,12 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
 
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
-    return UserResponse(id=current_user.id, email=current_user.email, organization_id=current_user.organization_id)
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        organization_id=current_user.organization_id,
+        organization_name=current_user.organization.name,
+    )
 
 
 @router.post("/forgot-password", response_model=MessageResponse)

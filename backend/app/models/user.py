@@ -8,9 +8,10 @@ import uuid
 from datetime import datetime, UTC
 
 from sqlalchemy import DateTime, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
+from app.models.organization import Organization
 
 
 class User(Base):
@@ -20,6 +21,7 @@ class User(Base):
     organization_id: Mapped[str] = mapped_column(
         String, ForeignKey("organizations.id"), nullable=False, index=True
     )
+    organization: Mapped[Organization] = relationship(lazy="joined")
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     # Set on password reset. Tokens issued (iat) before this are rejected by

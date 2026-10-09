@@ -14,6 +14,7 @@ def test_register_returns_usable_token(unauthenticated_client):
     assert me.status_code == 200
     assert me.json()["email"] == EMAIL
     assert me.json()["organization_id"]
+    assert me.json()["organization_name"] == ORG_NAME
 
 
 def test_second_organization_can_register(unauthenticated_client):

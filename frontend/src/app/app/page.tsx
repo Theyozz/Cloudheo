@@ -14,7 +14,7 @@ import { SavingsSimulator } from "@/components/savings-simulator";
 import { useLanguage, type TranslationKey } from "@/lib/i18n";
 import { formatUsd } from "@/lib/format";
 import { fetchDashboardSummary, disconnectAwsAccount, type DashboardSummary } from "@/lib/api";
-import { AuthRequiredError, logout, verifyToken } from "@/lib/auth";
+import { AuthRequiredError, getCurrentUser, logout } from "@/lib/auth";
 
 const CATEGORY_LABEL_KEYS: Record<string, TranslationKey> = {
   RIGHTSIZING: "rec_category_rightsizing",
@@ -27,15 +27,15 @@ const CATEGORY_LABEL_KEYS: Record<string, TranslationKey> = {
 export default function DashboardPage() {
   const { t } = useLanguage();
   const [authChecked, setAuthChecked] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [organizationName, setOrganizationName] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function check() {
-      const ok = await verifyToken();
+      const user = await getCurrentUser();
       if (!cancelled) {
-        setIsAuthenticated(ok);
+        setOrganizationName(user?.organizationName ?? null);
         setAuthChecked(true);
       }
     }
@@ -46,25 +46,31 @@ export default function DashboardPage() {
     };
   }, []);
 
+  async function handleAuthenticated() {
+    const user = await getCurrentUser();
+    setOrganizationName(user?.organizationName ?? null);
+  }
+
   if (!authChecked) {
     return <main className="dashboard-loading"><Brand /><p role="status" className="flex items-center gap-2"><LoaderCircle size={15} className="spin" />{t("loading_text")}</p></main>;
   }
 
-  if (!isAuthenticated) {
-    return <LoginForm onAuthenticated={() => setIsAuthenticated(true)} />;
+  if (!organizationName) {
+    return <LoginForm onAuthenticated={handleAuthenticated} />;
   }
 
   return (
     <Dashboard
+      organizationName={organizationName}
       onLoggedOut={() => {
         logout();
-        setIsAuthenticated(false);
+        setOrganizationName(null);
       }}
     />
   );
 }
 
-function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
+function Dashboard({ organizationName, onLoggedOut }: { organizationName: string; onLoggedOut: () => void }) {
   const { t } = useLanguage();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -183,7 +189,13 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
       <a href="#overview" className="skip-link">{t("skip_to_content")}</a>
       <header className="dashboard-header">
         <div className="site-container header-inner">
-          <Brand />
+          <div className="dashboard-brand-group">
+            <Brand />
+            <p className="dashboard-org" title={organizationName}>
+              <span className="dashboard-org-name">{organizationName}</span>
+              <span className="dashboard-org-label">{t("dashboard_workspace_label")}</span>
+            </p>
+          </div>
           <div className="dashboard-header-actions">
             <ThemeSwitcher />
             <LanguageSwitcher />

@@ -21,6 +21,7 @@ class UserResponse(BaseModel):
     id: str
     email: str
     organization_id: str
+    organization_name: str
 
 
 class ForgotPasswordRequest(BaseModel):
