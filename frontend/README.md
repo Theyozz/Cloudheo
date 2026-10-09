@@ -9,6 +9,7 @@ dashboard (AWS spend, potential savings, recommendations, savings simulator).
 |---|---|---|
 | `/` | Yes | Landing page — pitch, how it works, security, contact CTA |
 | `/app` | Login required | Dashboard — login/register gate, then the real app |
+| `/reset-password` | Yes | Set a new password from a forgot-password email link (`?token=...`) |
 
 ## Stack
 
@@ -24,11 +25,13 @@ src/
 │   ├── layout.tsx        Root layout, fonts, wraps the app in LanguageProvider
 │   ├── page.tsx            Landing page (public)
 │   ├── app/page.tsx        Dashboard — auth gate (login/register) then the app
+│   ├── reset-password/page.tsx  Set a new password from an emailed token
 │   └── globals.css        Design tokens (colors, light/dark mode) + Tailwind import
 ├── components/
 │   ├── backend-status.tsx     Live API connectivity indicator (polls GET /health)
 │   ├── language-switcher.tsx  EN/FR toggle
-│   ├── login-form.tsx          Register (first run only) / sign in, with a show/hide password toggle
+│   ├── login-form.tsx          Sign in / create organization / forgot password, with a show/hide password toggle
+│   ├── reset-password-form.tsx New password + confirm, from a forgot-password email link
 │   ├── connect-aws-form.tsx    Role ARN (+ external ID / region) to connect an AWS account
 │   ├── stat-tile.tsx           Stat card (label, value, optional delta)
 │   ├── risk-badge.tsx          LOW/MEDIUM/HIGH risk pill
@@ -37,7 +40,7 @@ src/
 │   └── savings-simulator.tsx   Live total for the currently selected recommendations
 └── lib/
     ├── i18n.tsx            Translation dictionary + React context (see below)
-    ├── auth.ts              Token storage, login/register/logout, authFetch() wrapper
+    ├── auth.ts              Token storage, login/register/logout/forgot-reset password, authFetch() wrapper
     ├── api.ts                Typed calls to the dashboard/AWS/AI endpoints
     └── format.ts             Shared USD currency formatting
 ```
@@ -70,6 +73,15 @@ an organization name field. Every protected API call goes through
 `authFetch()`, which attaches the bearer token and throws `AuthRequiredError`
 on a 401 so the dashboard can drop back to the login screen (expired
 session) without a special case at every call site.
+
+`LoginForm` has a third mode, "forgot password": just an email field, always
+shows the same "check your email" confirmation regardless of whether that
+email has an account (the backend is deliberately silent about this too —
+see the backend README). The emailed link opens the public `/reset-password`
+page (`reset-password-form.tsx`), which reads `?token=` from the URL, asks
+for a new password twice, and submits it. A successful reset signs the user
+out of every other session as well — expect to have to log back in anywhere
+else you were signed in.
 
 ## Internationalization
 

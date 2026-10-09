@@ -5,6 +5,7 @@ import { ArrowUpRight, Cloud, Layers3, LayoutDashboard, LoaderCircle, LogOut, Re
 import { Brand } from "@/components/brand";
 import { BackendStatus } from "@/components/backend-status";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeSwitcher } from "@/components/theme";
 import { LoginForm } from "@/components/login-form";
 import { ConnectAwsForm } from "@/components/connect-aws-form";
 import { StatTile } from "@/components/stat-tile";
@@ -240,6 +241,7 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
           <Brand />
           <div className="dashboard-header-actions">
             <div className="dashboard-api-status"><BackendStatus /></div>
+            <ThemeSwitcher />
             <LanguageSwitcher />
             <button
               type="button"

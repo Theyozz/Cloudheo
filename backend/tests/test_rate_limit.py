@@ -59,3 +59,25 @@ def test_dashboard_summary_is_rate_limited_after_too_many_calls(client):
 
     resp = client.get("/dashboard/summary")
     assert resp.status_code == 429
+
+
+def test_forgot_password_is_rate_limited_after_too_many_calls(unauthenticated_client):
+    for _ in range(5):
+        resp = unauthenticated_client.post("/auth/forgot-password", json={"email": "nobody@cloudheo.dev"})
+        assert resp.status_code == 200
+
+    resp = unauthenticated_client.post("/auth/forgot-password", json={"email": "nobody@cloudheo.dev"})
+    assert resp.status_code == 429
+
+
+def test_reset_password_is_rate_limited_after_too_many_calls(unauthenticated_client):
+    for _ in range(10):
+        resp = unauthenticated_client.post(
+            "/auth/reset-password", json={"token": "not-a-real-token", "new_password": PASSWORD}
+        )
+        assert resp.status_code == 400
+
+    resp = unauthenticated_client.post(
+        "/auth/reset-password", json={"token": "not-a-real-token", "new_password": PASSWORD}
+    )
+    assert resp.status_code == 429

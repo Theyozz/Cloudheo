@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { LanguageProvider } from "@/lib/i18n";
+import { ThemeSync } from "@/components/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,9 +24,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      data-theme="dark"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <ThemeSync />
         <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>

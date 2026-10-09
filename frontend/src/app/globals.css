@@ -1,21 +1,29 @@
 @import "tailwindcss";
 
+/* Light defaults — overridden below by the attribute-driven block, which
+   always wins (higher specificity) once data-theme is present. Since
+   ThemeSync hard-sets data-theme on <html>, even during SSR (see
+   layout.tsx), that's effectively always, so this block only matters as a
+   fallback for the handful of properties (status colors) that live here. */
 :root {
   color-scheme: light;
-  --background: #f8f9f5;
-  --foreground: #202923;
-  --surface-1: #ffffff;
-  --surface-2: #f0f2ec;
-  --text-secondary: #626a63;
-  --text-muted: #70786f;
-  --gridline: #e9ede5;
-  --border-hairline: #dfe4da;
-  --accent: #456b50;
-  --accent-soft: #eaf0e5;
+  --background: #faf6f5;
+  --foreground: #302625;
+  --surface-1: #fffdfc;
+  --surface-2: #f1eae7;
+  --text-secondary: #685d59;
+  --text-muted: #796c67;
+  --gridline: #e9dfdb;
+  --border-hairline: #dfd2cd;
+  --accent: #2c4c82;
+  --accent-soft: #e3e9f5;
+  --accent-secondary: #4a6fa5;
+  --accent-secondary-soft: #e8edf6;
+  --accent-hover: #1d3356;
   --status-good: #3c704d;
   --status-warning: #93671b;
   --status-critical: #bd4545;
-  --card-shadow: 0 3px 6px -4px #2436260d, 0 16px 40px -28px #2436261a;
+  --card-shadow: 0 3px 6px -4px #0002, 0 20px 45px -28px #0006;
 }
 
 @theme inline {
@@ -25,138 +33,137 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:where(:not([data-theme="light"])) {
-    color-scheme: dark;
-    --background: #151c18;
-    --foreground: #edf0e9;
-    --surface-1: #1c251f;
-    --surface-2: #232d25;
-    --text-secondary: #b0baaf;
-    --text-muted: #98a494;
-    --gridline: #303c31;
-    --border-hairline: #344035;
-    --accent: #aec69a;
-    --accent-soft: #29392b;
-    --status-good: #accb95;
-    --status-warning: #e3bb70;
-    --status-critical: #ee9393;
-    --card-shadow: 0 12px 40px -24px #0005;
-  }
-}
-
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --background: #151c18;
-  --foreground: #edf0e9;
-  --surface-1: #1c251f;
-  --surface-2: #232d25;
-  --text-secondary: #b0baaf;
-  --text-muted: #98a494;
-  --gridline: #303c31;
-  --border-hairline: #344035;
-  --accent: #aec69a;
-  --accent-soft: #29392b;
-  --status-good: #accb95;
-  --status-warning: #e3bb70;
-  --status-critical: #ee9393;
-  --card-shadow: 0 12px 40px -24px #0005;
-}
-
-/* The wrapper provides SSR colors; the root attribute follows the visible
-  landing's lifecycle. Cached, hidden pages cannot recolor /app. */
-:root[data-landing-theme],
+/* data-theme is set on <html> once, globally, by ThemeSync
+   (components/theme.tsx) — mounted in the root layout, not any one page, so
+   a choice made anywhere applies everywhere, no OS preference involved.
+   .landing-page repeats the same colors unconditionally so the landing
+   page's own SSR output is never unstyled before that attribute exists. */
+:root[data-theme],
 .landing-page {
-  color-scheme: light dark;
-  --background: light-dark(#f6f8fc, #101827);
-  --foreground: light-dark(#1b2942, #e8eefb);
-  --surface-1: light-dark(#ffffff, #182338);
-  --surface-2: light-dark(#edf1f8, #1c2940);
-  --text-secondary: light-dark(#57657a, #b2bfd3);
-  --text-muted: light-dark(#65748b, #9baac2);
-  --gridline: light-dark(#e4eaf3, #2a3850);
-  --border-hairline: light-dark(#d9e1ee, #33425e);
-  --accent: light-dark(#345fbb, #a3beff);
-  --accent-soft: light-dark(#e8eefb, #202f4b);
-  --card-shadow: 0 3px 6px -4px #172e510d, 0 16px 40px -28px #172e5126;
+  /* No color-scheme here: it must come from whichever :root[data-theme="…"]
+     rule below matches, so .landing-page inherits it rather than forcing
+     dark regardless of the actual preference. */
+  --background: light-dark(#faf6f5, #111113);
+  --foreground: light-dark(#302625, #f4efed);
+  --surface-1: light-dark(#fffdfc, #1c1a1b);
+  --surface-2: light-dark(#f1eae7, #171617);
+  --text-secondary: light-dark(#685d59, #bfb7b3);
+  --text-muted: light-dark(#796c67, #a79b96);
+  --gridline: light-dark(#e9dfdb, #2c2727);
+  --border-hairline: light-dark(#dfd2cd, #393131);
+  --accent: light-dark(#2c4c82, #7ea2e0);
+  --accent-soft: light-dark(#e3e9f5, #1d2a42);
+  --accent-secondary: light-dark(#4a6fa5, #9fb8e3);
+  --accent-secondary-soft: light-dark(#e8edf6, #202c40);
+  --accent-hover: light-dark(#1d3356, #a9c4ef);
+  --status-good: light-dark(#3c704d, #accb95);
+  --status-warning: light-dark(#93671b, #e3bb70);
+  --status-critical: light-dark(#bd4545, #ee9393);
+  --card-shadow: 0 3px 6px -4px #0002, 0 20px 45px -28px #0006;
 }
 
-:root[data-landing-theme="light"],
-.landing-page[data-theme="light"] {
+:root[data-theme="system"] {
+  color-scheme: light dark;
+}
+
+:root[data-theme="light"] {
   color-scheme: light;
 }
 
-:root[data-landing-theme="dark"],
-.landing-page[data-theme="dark"] {
+:root[data-theme="dark"] {
   color-scheme: dark;
 }
 
 .landing-page {
   min-height: 100svh;
-  background: var(--background);
+  background:
+    radial-gradient(ellipse 650px 520px at 87% 260px, color-mix(in srgb, var(--accent-secondary) 8%, transparent), transparent 75%),
+    radial-gradient(ellipse 550px 450px at 8% 220px, color-mix(in srgb, var(--accent) 5%, transparent), transparent 75%),
+    var(--background);
   color: var(--foreground);
 }
 
 .landing-page .button-primary {
-  background: var(--accent);
+  background: var(--foreground);
   color: var(--background);
 }
 
 .landing-page .button-primary:hover:not(:disabled) {
-  background: light-dark(#284d9d, #bed0ff);
+  background: var(--accent-hover);
+}
+
+.landing-page .preview-halo {
+  background:
+    radial-gradient(ellipse at 70% 30%, color-mix(in srgb, var(--accent-secondary) 14%, transparent), transparent 60%),
+    radial-gradient(ellipse at 25% 70%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 65%);
 }
 
 .landing-page .product-preview {
-  box-shadow: 0 3px 5px #172e5105, 0 22px 65px -22px #23437226, 0 0 0 6px color-mix(in srgb, var(--surface-1) 50%, transparent);
+  box-shadow: 0 3px 5px #0001, 0 25px 70px -22px #0005, 0 0 0 6px color-mix(in srgb, var(--surface-1) 50%, transparent);
 }
 
 .landing-page .preview-floating-note {
-  box-shadow: 0 8px 30px #172e5112;
+  box-shadow: 0 8px 30px #0003;
 }
 
 .landing-page .workflow-card:hover {
-  box-shadow: 0 12px 30px #172e510c;
+  box-shadow: 0 12px 30px #0003;
+}
+
+.landing-page .finding-card:nth-child(2) .icon-box,
+.landing-page .finding-card:nth-child(5) .icon-box,
+.landing-page .workflow-card:nth-child(2) .workflow-icon {
+  background: var(--accent-secondary-soft);
+  color: var(--accent-secondary);
+}
+
+.landing-page .finding-note {
+  background: linear-gradient(135deg, var(--accent-soft), var(--surface-1));
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--border-hairline));
 }
 
 .landing-page .security-section {
   color-scheme: dark;
-  --foreground: #edf2fc;
-  --text-secondary: #b8c6dd;
-  --text-muted: #a3b4ce;
-  --accent: #b0c8ff;
-  --accent-soft: #24395d;
-  --surface-1: #1e3050;
-  --surface-2: #243959;
-  --gridline: #334b70;
-  --border-hairline: #364c6d;
-  background: #182941;
+  --foreground: #f4efed;
+  --text-secondary: #b9c2cf;
+  --text-muted: #94a0b0;
+  --accent: #7ea2e0;
+  --accent-soft: #1d2a42;
+  --surface-1: #1a2030;
+  --surface-2: #212838;
+  --gridline: #2a3245;
+  --border-hairline: #34405a;
+  background:
+    radial-gradient(ellipse at 18% 65%, #3a5a9a18, transparent 60%),
+    linear-gradient(120deg, #141825, #1a2233 60%, #151a28);
+  border-block: 1px solid var(--border-hairline);
 }
 
 .landing-page .cloud-orbit::before {
-  background: radial-gradient(ellipse, #87b0ff18, transparent 70%);
+  background: radial-gradient(ellipse, #7ea2e014, #9fb8e30a 40%, transparent 70%);
 }
 
 .landing-page .orbit-ring {
-  border-color: #96b6ea38;
+  border-color: #9fb8e33d;
 }
 
 .landing-page .orbit-core {
-  color: #e3edff;
-  background: linear-gradient(135deg, #4d6da3, #233e69 80%);
-  border-color: #8dafe366;
-  box-shadow: inset 0 1px 1px #fff2, 8px 15px 22px #08152d55;
+  color: #dce6f7;
+  background: linear-gradient(135deg, #3d5a85, #1c2740 80%);
+  border-color: #7ea2e066;
+  box-shadow: inset 0 1px 1px #fff2, 8px 15px 22px #0005;
 }
 
 .landing-page .orbit-node {
-  background: #233a5a;
-  border-color: #7c9bc660;
-  color: #c5d8f8;
-  box-shadow: 0 5px 15px #08152d33;
+  background: #1f2738;
+  border-color: #7691c060;
+  color: #c3d2ec;
+  box-shadow: 0 5px 15px #0003;
 }
 
 .landing-page .orbit-point {
-  background: #a7c5f5;
-  box-shadow: 0 0 0 5px #a7c5f50a;
+  background: #7ea2e0;
+  box-shadow: 0 0 0 5px #7ea2e00a;
 }
 
 html {
@@ -266,9 +273,17 @@ svg {
   place-items: center;
   width: 33px;
   height: 33px;
-  background: var(--foreground);
-  color: var(--background);
+  padding: 5px;
+  /* Fixed, not theme-driven: the logo's navy/blue only reads correctly on a
+     light backdrop, so the badge behind it stays light in both themes. */
+  background: #eef2fb;
   border-radius: 10px;
+}
+
+.brand-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .brand-period {
@@ -276,16 +291,11 @@ svg {
 }
 
 .brand-inverse {
-  color: #f0f2e8;
-}
-
-.brand-inverse .brand-mark {
-  background: #dce6cf;
-  color: #243829;
+  color: #f4efed;
 }
 
 .brand-inverse .brand-period {
-  color: #b1c696;
+  color: #7ea2e0;
 }
 
 .site-header {
@@ -622,7 +632,7 @@ svg {
   border: 1px solid var(--border-hairline);
   border-radius: 13px;
   background: var(--surface-1);
-  box-shadow: 0 3px 5px #20321d05, 0 22px 65px -22px #30422a26, 0 0 0 6px color-mix(in srgb, var(--surface-1) 50%, transparent);
+  box-shadow: 0 3px 5px #0001, 0 25px 70px -22px #0005, 0 0 0 6px color-mix(in srgb, var(--surface-1) 50%, transparent);
   transform: perspective(1600px) rotateY(-4deg) rotateX(2deg);
   transition: transform .6s;
 }
@@ -912,7 +922,7 @@ svg {
   border: 1px solid var(--border-hairline);
   border-radius: 10px;
   background: var(--surface-1);
-  box-shadow: 0 8px 30px #26352712;
+  box-shadow: 0 8px 30px #0003;
   transform: rotate(-2deg);
 }
 
@@ -1038,7 +1048,7 @@ svg {
 
 .workflow-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 30px #2535210c;
+  box-shadow: 0 12px 30px #0003;
 }
 
 .workflow-card-top {
@@ -1276,21 +1286,25 @@ svg {
   color: var(--text-secondary);
 }
 
+/* Same always-dark, warm accent panel treatment as .landing-page
+   .security-section (see above) — kept in sync by hand since .auth-story
+   and .simulator-panel live outside .landing-page and can't reuse that
+   more specific selector. */
 .security-section,
 .auth-story,
 .simulator-panel {
-  --foreground: #f0f2e8;
-  --text-secondary: #bac7b3;
-  --text-muted: #a2b09d;
-  --accent: #c0d3aa;
-  --accent-soft: #344a35;
-  --surface-1: #2a3b2c;
-  --surface-2: #304231;
-  --gridline: #40533c;
-  --border-hairline: #41513d;
-  --status-good: #c2dca8;
+  color-scheme: dark;
+  --foreground: #f4efed;
+  --text-secondary: #b9c2cf;
+  --text-muted: #94a0b0;
+  --accent: #7ea2e0;
+  --accent-soft: #1d2a42;
+  --surface-1: #1a2030;
+  --surface-2: #212838;
+  --gridline: #2a3245;
+  --border-hairline: #34405a;
   color: var(--foreground);
-  background: #233426;
+  background: #15192a;
 }
 
 .security-section {
@@ -1380,7 +1394,7 @@ svg {
   position: absolute;
   inset: 30px;
   border-radius: 50%;
-  background: radial-gradient(ellipse, #b0d29010, transparent 70%);
+  background: radial-gradient(ellipse, #7ea2e014, transparent 70%);
 }
 
 .orbit-ring {
@@ -1389,7 +1403,7 @@ svg {
   height: 48%;
   left: 9%;
   top: 26%;
-  border: 1px solid #b5c8a532;
+  border: 1px solid #9fb8e33d;
   border-radius: 50%;
 }
 
@@ -1418,10 +1432,10 @@ svg {
   display: grid;
   place-items: center;
   border-radius: 27px;
-  color: #deebcf;
-  background: linear-gradient(135deg, #647656, #2e422d 80%);
-  border: 1px solid #a6ba8b66;
-  box-shadow: inset 0 1px 1px #fff2, 8px 15px 22px #10230d55;
+  color: #dce6f7;
+  background: linear-gradient(135deg, #3d5a85, #1c2740 80%);
+  border: 1px solid #7ea2e066;
+  box-shadow: inset 0 1px 1px #fff2, 8px 15px 22px #0005;
   transform: rotate(-9deg);
   transition: transform .7s;
 }
@@ -1436,11 +1450,11 @@ svg {
   place-items: center;
   width: 43px;
   height: 43px;
-  background: #2d402f;
-  border: 1px solid #81927460;
+  background: #1f2738;
+  border: 1px solid #7691c060;
   border-radius: 12px;
-  color: #c1d1b0;
-  box-shadow: 0 5px 15px #0f230d33;
+  color: #c3d2ec;
+  box-shadow: 0 5px 15px #0003;
 }
 
 .orbit-node-one {
@@ -1464,9 +1478,9 @@ svg {
 .orbit-point {
   width: 6px;
   height: 6px;
-  background: #abc397;
+  background: #7ea2e0;
   border-radius: 50%;
-  box-shadow: 0 0 0 5px #abc3970a;
+  box-shadow: 0 0 0 5px #7ea2e00a;
   position: absolute;
 }
 
@@ -1707,6 +1721,12 @@ svg {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
+}
+
+.auth-topbar-actions {
+  display: flex;
+  align-items: center;
   gap: 16px;
 }
 
@@ -1954,10 +1974,10 @@ svg {
 }
 
 .simulator-panel {
-  border: 1px solid #41513d;
+  border: 1px solid #34405a;
   border-radius: 18px;
   padding: 28px;
-  background: #233426;
+  background: #15192a;
   box-shadow: var(--card-shadow);
 }
 
@@ -2260,7 +2280,7 @@ svg {
 }
 
 @media (max-width: 600px) {
-  html[data-landing-theme] {
+  body:has(.landing-page) {
     scroll-padding-top: 130px;
   }
 

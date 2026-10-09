@@ -16,6 +16,8 @@ from app.core.rate_limit import limiter
 from app.main import app
 from app.services.ai import get_ai_provider
 from app.services.ai.stub_provider import StubExplanationProvider
+from app.services.email import get_email_provider
+from app.services.email.stub_provider import SENT_EMAILS, StubEmailProvider
 
 TEST_ORG_NAME = "Test Org"
 TEST_USER_EMAIL = "test@cloudheo.dev"
@@ -28,6 +30,12 @@ def _reset_rate_limiter():
     without resetting, login/register rate limits would accumulate across
     the whole test run and start failing unrelated tests."""
     limiter.reset()
+    yield
+
+
+@pytest.fixture(autouse=True)
+def _reset_sent_emails():
+    SENT_EMAILS.clear()
     yield
 
 
@@ -53,6 +61,8 @@ def _new_test_client() -> TestClient:
     # Never call the real Claude API from automated tests — see
     # tests/test_ai.py for the rationale (speed, determinism, no required key).
     app.dependency_overrides[get_ai_provider] = lambda: StubExplanationProvider()
+    # Same reasoning for Resend — see tests/test_password_reset.py.
+    app.dependency_overrides[get_email_provider] = lambda: StubEmailProvider()
     return TestClient(app)
 
 

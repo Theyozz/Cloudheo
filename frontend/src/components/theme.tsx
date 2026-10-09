@@ -1,14 +1,15 @@
 "use client";
 
-import { createContext, useContext, useLayoutEffect, useSyncExternalStore, type ReactNode } from "react";
+import { useLayoutEffect, useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 
 type Theme = "system" | "light" | "dark";
 
-// Scoped to the landing experiment; the application keeps its existing theme.
-const STORAGE_KEY = "cloudheo-landing-theme";
-const CHANGE_EVENT = "cloudheo-landing-theme-change";
+// One preference for the whole app (landing, dashboard, auth pages) — not
+// scoped to whichever page the user happened to set it from.
+const STORAGE_KEY = "cloudheo-theme";
+const CHANGE_EVENT = "cloudheo-theme-change";
 let fallbackTheme: Theme | null = null;
 
 function isTheme(value: unknown): value is Theme {
@@ -19,14 +20,14 @@ function getSnapshot(): Theme {
   if (fallbackTheme !== null) return fallbackTheme;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return isTheme(stored) ? stored : "system";
+    return isTheme(stored) ? stored : "dark";
   } catch {
-    return "system";
+    return "dark";
   }
 }
 
 function getServerSnapshot(): Theme {
-  return "system";
+  return "dark";
 }
 
 function subscribe(onChange: () => void) {
@@ -56,24 +57,17 @@ function setTheme(theme: Theme) {
   window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
-const ThemeContext = createContext<Theme>("system");
-
-export function LandingTheme({ children }: { children: ReactNode }) {
+/** Keeps <html data-theme> in sync with the stored preference. Mounted once
+ * in the root layout (not a specific page) so a choice made anywhere
+ * applies on every page, including ones visited later in the same session. */
+export function ThemeSync() {
   const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   useLayoutEffect(() => {
-    const root = document.documentElement;
-    root.setAttribute("data-landing-theme", theme);
-    // Next.js retains hidden pages with Activity. Its effect cleanup prevents
-    // the landing's browser canvas and scrollbar theme from leaking into /app.
-    return () => root.removeAttribute("data-landing-theme");
+    document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
-  return (
-    <ThemeContext.Provider value={theme}>
-      <div className="landing-page" data-theme={theme}>{children}</div>
-    </ThemeContext.Provider>
-  );
+  return null;
 }
 
 function subscribeToSystemTheme(onChange: () => void) {
@@ -90,8 +84,10 @@ function getServerSystemDark() {
   return false;
 }
 
+/** Reads the same global preference directly — no provider/context needed,
+ * so this can be dropped into any page's header. */
 export function ThemeSwitcher() {
-  const theme = useContext(ThemeContext);
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const { t } = useLanguage();
   const systemDark = useSyncExternalStore(subscribeToSystemTheme, getSystemDark, getServerSystemDark);
   const isDark = theme === "dark" || (theme === "system" && systemDark);

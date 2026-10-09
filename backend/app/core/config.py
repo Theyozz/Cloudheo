@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     # calculations themselves.
     ANTHROPIC_API_KEY: str = ""
 
+    # For the password-reset email (app/services/email). EMAIL_FROM must be
+    # a verified sender/domain in Resend before it can email real customers.
+    RESEND_API_KEY: str = ""
+    EMAIL_FROM: str = "Cloudheo <onboarding@resend.dev>"
+
+    # Base URL of the frontend, used to build the link in reset-password emails.
+    FRONTEND_URL: str = "http://localhost:3000"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]

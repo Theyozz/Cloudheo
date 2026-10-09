@@ -31,7 +31,7 @@ import { Brand } from "@/components/brand";
 import { CloudOrbit } from "@/components/cloud-orbit";
 import { ProductPreview } from "@/components/product-preview";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { LandingTheme, ThemeSwitcher } from "@/components/landing-theme";
+import { ThemeSwitcher } from "@/components/theme";
 import { LocalizedText, type TranslationKey } from "@/lib/i18n";
 
 const CONTACT_EMAIL = "theomaurin875@gmail.com";
@@ -102,7 +102,7 @@ function PrimaryButton({ children }: { children: React.ReactNode }) {
 
 export default function LandingPage() {
   return (
-    <LandingTheme>
+    <div className="landing-page">
       <a href="#main-content" className="skip-link"><LocalizedText id="skip_to_content" /></a>
       <header className="site-header">
         <div className="site-container header-inner">
@@ -244,6 +244,6 @@ export default function LandingPage() {
       <footer className="site-footer">
         <div className="site-container footer-inner"><Brand /><p><LocalizedText id="landing_footer_note" /></p><span><LocalizedText id="landing_footer" /></span></div>
       </footer>
-    </LandingTheme>
+    </div>
   );
 }

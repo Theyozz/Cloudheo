@@ -10,6 +10,8 @@ from app.models.audit_log import AuditLog
 class AuditAction:
     AUTH_REGISTER = "auth.register"
     AUTH_LOGIN = "auth.login"
+    AUTH_PASSWORD_RESET_REQUESTED = "auth.password_reset_requested"
+    AUTH_PASSWORD_RESET_COMPLETED = "auth.password_reset_completed"
     AWS_CONNECT = "aws.connect"
     AWS_DISCONNECT = "aws.disconnect"
 

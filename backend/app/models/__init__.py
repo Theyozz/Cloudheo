@@ -9,6 +9,7 @@ from app.core.db import Base
 from app.models.audit_log import AuditLog
 from app.models.aws_account import AwsAccount
 from app.models.organization import Organization
+from app.models.password_reset_token import PasswordResetToken
 from app.models.user import User
 
-__all__ = ["Base", "AuditLog", "AwsAccount", "Organization", "User"]
+__all__ = ["Base", "AuditLog", "AwsAccount", "Organization", "PasswordResetToken", "User"]

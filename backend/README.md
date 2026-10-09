@@ -11,6 +11,7 @@ Next.js frontend.
 - **PostgreSQL** — database
 - **boto3** — AWS SDK (STS, Cost Explorer, EC2, RDS, EBS, CloudWatch)
 - **bcrypt** + **PyJWT** — password hashing and session tokens
+- **Resend** — forgot-password emails
 - **slowapi** — rate limiting on `/auth/login` and `/auth/register`
 - **pytest** + **moto** — tests, with AWS calls mocked (no real AWS account needed to run the suite)
 
@@ -30,7 +31,7 @@ app/
 │   ├── db.py                SQLAlchemy engine/session, declarative Base
 │   ├── security.py          Password hashing, JWT encode/decode
 │   └── deps.py               get_current_user FastAPI dependency
-├── models/                SQLAlchemy models: Organization, User, AwsAccount, AuditLog
+├── models/                SQLAlchemy models: Organization, User, AwsAccount, AuditLog, PasswordResetToken
 ├── schemas/                Pydantic request/response schemas
 └── services/
     ├── aws/                 AWS integrations
@@ -46,6 +47,10 @@ app/
     ├── ai/                   AI explanation service
     │   ├── base.py              ExplanationProvider interface
     │   ├── claude_provider.py   Real implementation (Claude Haiku 5.5)
+    │   └── stub_provider.py     No-network fake, used in tests
+    ├── email/                Password-reset email
+    │   ├── base.py              EmailProvider interface
+    │   ├── resend_provider.py   Real implementation (Resend)
     │   └── stub_provider.py     No-network fake, used in tests
     └── audit.py              log_action() — records an AuditLog row, atomic with the action it describes
 alembic/                  Migrations
@@ -71,6 +76,8 @@ Copy `../.env.example` to `.env` in this directory and fill in:
 | `CORS_ORIGINS` | Allowed frontend origin(s) |
 | `JWT_SECRET_KEY` | Signs login sessions — generate with `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`. The in-code default is an obvious placeholder; the app **refuses to start** with it when `ENVIRONMENT` isn't `development` |
 | `ANTHROPIC_API_KEY` | From `console.anthropic.com` (a developer account, separate from a claude.ai subscription) — powers `POST /ai/explain`. Billed pay-as-you-go by token, not a flat fee; Haiku calls for this feature cost a small fraction of a cent each |
+| `RESEND_API_KEY` / `EMAIL_FROM` | From `resend.com` — sends the forgot-password email. `EMAIL_FROM` must be a verified sender/domain in Resend before it can email real customers; the default (`onboarding@resend.dev`) only delivers to the Resend account owner's own inbox |
+| `FRONTEND_URL` | Base URL of the running frontend, used to build the link inside the forgot-password email |
 
 ### Database
 
@@ -110,19 +117,28 @@ account or data. Everything except `GET /health` and `/auth/*` requires an
 frontend's login screen lets the user toggle between "sign in" and "create
 an organization" rather than guessing which to show.
 
-Known gap: there is no password-reset flow yet — a user who forgets their
-password is locked out. Not blocking for an internal/first-customer pilot,
-but needed before a self-serve audience.
+Forgot-password flow: `POST /auth/forgot-password` always returns the same
+message whether or not the email is registered (it must not let anyone probe
+which emails have an account). If it does, a single-use, 1-hour token is
+stored (only its SHA-256 hash — never the raw token, same reasoning as
+password hashing) and emailed as a link to `FRONTEND_URL/reset-password`.
+`POST /auth/reset-password` verifies it, sets the new password, and also
+sets `password_changed_at` on the user — every JWT issued (`iat`) before
+that moment is then rejected by `get_current_user`, so resetting a password
+logs out every existing session, including a stolen token's.
 
-All endpoints below that touch AWS or spend money per call are rate-limited
-per IP via `slowapi` (`app/core/rate_limit.py`), in-memory (resets on
-restart, not shared across multiple backend processes — revisit with a
-shared store like Redis if Cloudheo ever runs more than one API process):
+All endpoints below that touch AWS, spend money, or could be used to spam a
+victim's inbox are rate-limited per IP via `slowapi` (`app/core/rate_limit.py`),
+in-memory (resets on restart, not shared across multiple backend processes —
+revisit with a shared store like Redis if Cloudheo ever runs more than one
+API process):
 
 | Endpoint | Limit | Why |
 |---|---|---|
 | `POST /auth/login` | 10/minute | Password brute-forcing |
 | `POST /auth/register` | 5/hour | Spam account creation (registration is always open) |
+| `POST /auth/forgot-password` | 5/hour | Spamming a victim's inbox / probing which emails are registered |
+| `POST /auth/reset-password` | 10/hour | Defense in depth (the token itself is 256 bits, brute-forcing it is infeasible) |
 | `POST /aws/connect` | 20/hour | Each call performs a real AssumeRole against a customer AWS account |
 | `GET /dashboard/summary` | 30/minute | Each call makes several live AWS API calls (Cost Explorer, EC2/RDS/EBS) |
 | `POST /ai/explain` | 30/hour | Each call is a billed Claude API request |
@@ -134,6 +150,8 @@ shared store like Redis if Cloudheo ever runs more than one API process):
 | `GET /health` | — | Liveness check |
 | `POST /auth/register` | — | Create a new organization and its first user |
 | `POST /auth/login` | — | Returns a JWT access token |
+| `POST /auth/forgot-password` | — | Request a password-reset email (always a generic response) |
+| `POST /auth/reset-password` | — | Reset the password with a valid token; invalidates existing sessions |
 | `GET /auth/me` | ✓ | Current user (includes `organization_id`) |
 | `POST` / `GET` / `DELETE /aws/connect` | ✓ | Store, read or remove the current organization's connected AWS account |
 | `GET /dashboard/summary` | ✓ | Cost + recommendations for the organization's connected account, in one call |
@@ -234,6 +252,5 @@ Fixed:
 
 Deferred (flagged, not fixed — each needs dedicated attention, not a drive-by change):
 - **`fastapi`/`starlette` have known CVEs patched only in versions far ahead of what's pinned** (`fastapi` 0.115.6 hard-pins `starlette<0.42`; the fixes are in `starlette>=0.47`). Fixing requires a `fastapi` major-version upgrade with its own regression testing — tracked, not done in this pass.
-- **No password-reset flow** (see Authentication section above) — a credential-recovery gap, not an exploit path, but blocking for a self-serve audience.
 - **No audit-log UI** — already a known, deliberate scope cut (see Audit logs section).
 - Email enumeration on `POST /auth/register` (409 reveals an email is already registered) — a conscious, common tradeoff for UX, not treated as a finding worth obscuring.
