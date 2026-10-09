@@ -11,6 +11,7 @@ Next.js frontend.
 - **PostgreSQL** — database
 - **boto3** — AWS SDK (STS, Cost Explorer, EC2, RDS, EBS, CloudWatch)
 - **bcrypt** + **PyJWT** — password hashing and session tokens
+- **slowapi** — rate limiting on `/auth/login` and `/auth/register`
 - **pytest** + **moto** — tests, with AWS calls mocked (no real AWS account needed to run the suite)
 
 ## Structure
@@ -111,6 +112,17 @@ account or data. Everything except `GET /health` and `/auth/*` requires an
 `Authorization: Bearer <token>` header (JWT, 24h expiry by default); the
 frontend's login screen lets the user toggle between "sign in" and "create
 an organization" rather than guessing which to show.
+
+Known gap: there is no password-reset flow yet — a user who forgets their
+password is locked out. Not blocking for an internal/first-customer pilot,
+but needed before a self-serve audience.
+
+`POST /auth/login` (10/minute) and `POST /auth/register` (5/hour) are
+rate-limited per IP via `slowapi` (`app/core/rate_limit.py`) — a basic
+defense against password brute-forcing and spam account creation now that
+registration is always open. In-memory storage, so limits reset on restart
+and aren't shared across multiple backend processes; revisit with a shared
+store (e.g. Redis) if Cloudheo ever runs more than one API process.
 
 ## API
 

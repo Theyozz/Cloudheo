@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.deps import get_current_user
+from app.core.rate_limit import limiter
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.organization import Organization
 from app.models.user import User
@@ -13,7 +14,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
-def register(payload: RegisterRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/hour")
+def register(request: Request, payload: RegisterRequest, db: Session = Depends(get_db)):
     """Create a new Organization and its first (and, for now, only) user.
     Registration is always open — each call onboards a new customer."""
     if db.query(User).filter(User.email == payload.email).first() is not None:
@@ -44,7 +46,8 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email).first()
     if user is None or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid email or password")

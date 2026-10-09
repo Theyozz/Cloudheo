@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.db import Base, get_db
+from app.core.rate_limit import limiter
 from app.main import app
 from app.services.ai import get_ai_provider
 from app.services.ai.stub_provider import StubExplanationProvider
@@ -19,6 +20,15 @@ from app.services.ai.stub_provider import StubExplanationProvider
 TEST_ORG_NAME = "Test Org"
 TEST_USER_EMAIL = "test@cloudheo.dev"
 TEST_USER_PASSWORD = "testpassword123"
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    """The limiter's in-memory counters are process-global, not per-test —
+    without resetting, login/register rate limits would accumulate across
+    the whole test run and start failing unrelated tests."""
+    limiter.reset()
+    yield
 
 
 def _new_test_client() -> TestClient:
