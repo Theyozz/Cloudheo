@@ -33,3 +33,25 @@ def test_connecting_twice_replaces_previous_account(client):
 
     status = client.get("/aws/connect").json()
     assert status["role_arn"] == second_role_arn
+
+
+@mock_aws
+def test_connected_account_is_not_visible_to_another_organization(unauthenticated_client):
+    org_a = unauthenticated_client.post(
+        "/auth/register",
+        json={"organization_name": "Org A", "email": "a@cloudheo.dev", "password": "supersecret123"},
+    ).json()
+    org_b = unauthenticated_client.post(
+        "/auth/register",
+        json={"organization_name": "Org B", "email": "b@cloudheo.dev", "password": "supersecret123"},
+    ).json()
+    headers_a = {"Authorization": f"Bearer {org_a['access_token']}"}
+    headers_b = {"Authorization": f"Bearer {org_b['access_token']}"}
+
+    role_arn = create_customer_role()
+    unauthenticated_client.post("/aws/connect", json={"role_arn": role_arn}, headers=headers_a)
+
+    status_a = unauthenticated_client.get("/aws/connect", headers=headers_a).json()
+    status_b = unauthenticated_client.get("/aws/connect", headers=headers_b).json()
+    assert status_a["connected"] is True
+    assert status_b["connected"] is False

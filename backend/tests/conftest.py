@@ -16,6 +16,7 @@ from app.main import app
 from app.services.ai import get_ai_provider
 from app.services.ai.stub_provider import StubExplanationProvider
 
+TEST_ORG_NAME = "Test Org"
 TEST_USER_EMAIL = "test@cloudheo.dev"
 TEST_USER_PASSWORD = "testpassword123"
 
@@ -59,7 +60,10 @@ def client():
     routes, which is almost everything. Registers and logs in one test user,
     then attaches its token to every request."""
     test_client = _new_test_client()
-    test_client.post("/auth/register", json={"email": TEST_USER_EMAIL, "password": TEST_USER_PASSWORD})
+    test_client.post(
+        "/auth/register",
+        json={"organization_name": TEST_ORG_NAME, "email": TEST_USER_EMAIL, "password": TEST_USER_PASSWORD},
+    )
     login_resp = test_client.post("/auth/login", json={"email": TEST_USER_EMAIL, "password": TEST_USER_PASSWORD})
     token = login_resp.json()["access_token"]
     test_client.headers.update({"Authorization": f"Bearer {token}"})

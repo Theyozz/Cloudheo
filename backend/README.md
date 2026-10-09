@@ -20,7 +20,8 @@ app/
 ├── main.py             FastAPI app, CORS, router registration
 ├── api/                 Route handlers (one file per resource)
 │   ├── health.py          GET /health (public)
-│   ├── auth.py             POST /auth/register, /login, GET /me, /status
+│   ├── auth.py             POST /auth/register, /login, GET /me
+│   ├── audit.py             GET /audit-logs
 │   ├── aws.py              POST /aws/test-connection, POST /aws/costs
 │   ├── connect.py          POST/GET/DELETE /aws/connect (stored AWS account)
 │   ├── resources.py        POST /aws/resources (EC2/EBS/RDS/snapshots)
@@ -31,7 +32,7 @@ app/
 │   ├── db.py                SQLAlchemy engine/session, declarative Base
 │   ├── security.py          Password hashing, JWT encode/decode
 │   └── deps.py               get_current_user FastAPI dependency
-├── models/                SQLAlchemy models: User, AwsAccount
+├── models/                SQLAlchemy models: Organization, User, AwsAccount, AuditLog
 ├── schemas/                Pydantic request/response schemas
 └── services/
     ├── aws/                 AWS integrations
@@ -44,10 +45,11 @@ app/
     │   ├── pricing.py           Static, documented-approximate pricing
     │   ├── environment.py       Non-production detection (tags/name)
     │   └── rules.py              The rules themselves
-    └── ai/                   AI explanation service
-        ├── base.py              ExplanationProvider interface
-        ├── claude_provider.py   Real implementation (Claude Haiku 5.5)
-        └── stub_provider.py     No-network fake, used in tests
+    ├── ai/                   AI explanation service
+    │   ├── base.py              ExplanationProvider interface
+    │   ├── claude_provider.py   Real implementation (Claude Haiku 5.5)
+    │   └── stub_provider.py     No-network fake, used in tests
+    └── audit.py              log_action() — records an AuditLog row, atomic with the action it describes
 alembic/                  Migrations
 tests/                    pytest suite, mirrors app/ structure
 scripts/                  One-off dev utilities (e.g. check_aws_identity.py)
@@ -97,31 +99,44 @@ account are required to run the suite. The `client` fixture (see
 `tests/conftest.py`) is pre-authenticated; use `unauthenticated_client` for
 tests of the auth flow itself.
 
-## Authentication
+## Authentication & multi-tenancy
 
-Single-admin MVP, not multi-tenant yet: `POST /auth/register` only succeeds
-once — the first account created becomes the only account, and the endpoint
-is closed afterwards (`403`). Everything except `GET /health` and the
-`/auth/*` endpoints requires a `Authorization: Bearer <token>` header
-(JWT, 24h expiry by default). The frontend's login screen shows "create
-admin account" or "sign in" based on `GET /auth/status`.
+Multi-tenant: each `POST /auth/register` call creates a new `Organization`
+plus its first user — registration is always open, since onboarding a new
+customer means creating a new organization. MVP simplification: one user per
+organization for now (no invitations/roles yet). Every connected AWS account
+(`aws_accounts` row) belongs to exactly one organization and is scoped by it
+on every read/write — one organization can never see another's connected
+account or data. Everything except `GET /health` and `/auth/*` requires an
+`Authorization: Bearer <token>` header (JWT, 24h expiry by default); the
+frontend's login screen lets the user toggle between "sign in" and "create
+an organization" rather than guessing which to show.
 
 ## API
 
 | Endpoint | Auth | Description |
 |---|---|---|
 | `GET /health` | — | Liveness check |
-| `GET /auth/status` | — | Whether an admin account already exists |
-| `POST /auth/register` | — | Create the (single) admin account; closed after first use |
+| `POST /auth/register` | — | Create a new organization and its first user |
 | `POST /auth/login` | — | Returns a JWT access token |
-| `GET /auth/me` | ✓ | Current user |
+| `GET /auth/me` | ✓ | Current user (includes `organization_id`) |
 | `POST /aws/test-connection` | ✓ | Assumes a customer's `CloudheoReadOnlyRole` and confirms the trust relationship, with no data access |
 | `POST /aws/costs` | ✓ | Total spend + spend by AWS service over a date range (defaults to the last 30 days) |
 | `POST /aws/resources` | ✓ | EC2/EBS/RDS/snapshot inventory, enriched with CloudWatch CPU |
 | `POST /finops/recommendations` | ✓ | Runs the rules engine over a fresh scan |
-| `POST` / `GET` / `DELETE /aws/connect` | ✓ | Store, read or remove the currently connected AWS account |
-| `GET /dashboard/summary` | ✓ | Cost + recommendations for the connected account, in one call |
+| `POST` / `GET` / `DELETE /aws/connect` | ✓ | Store, read or remove the current organization's connected AWS account |
+| `GET /dashboard/summary` | ✓ | Cost + recommendations for the organization's connected account, in one call |
 | `POST /ai/explain` | ✓ | Turns one recommendation's numbers into a plain-language explanation (Claude Haiku) |
+| `GET /audit-logs` | ✓ | Most recent audit log entries for the organization (newest first, capped at 200) |
+
+## Audit logs
+
+Every sensitive action is recorded to `audit_logs`, scoped by organization,
+in the same database transaction as the action itself (`app/services/audit.py`):
+registering, logging in, connecting an AWS account, and disconnecting one.
+Routine reads (dashboard views, recommendation scans) are not logged — the
+goal is "who did this, and when" for actions that matter, not a full request
+log. No UI yet; `GET /audit-logs` is the only way to read them today.
 
 ## FinOps rules engine
 

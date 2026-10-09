@@ -6,7 +6,9 @@ autogenerate can discover it via ``Base.metadata``.
 """
 
 from app.core.db import Base
+from app.models.audit_log import AuditLog
 from app.models.aws_account import AwsAccount
+from app.models.organization import Organization
 from app.models.user import User
 
-__all__ = ["Base", "AwsAccount", "User"]
+__all__ = ["Base", "AuditLog", "AwsAccount", "Organization", "User"]

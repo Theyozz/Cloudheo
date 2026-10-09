@@ -63,11 +63,13 @@ npm run lint    # ESLint
 
 `/app` is gated: on mount it calls `GET /auth/me` with the token in
 `localStorage` (`lib/auth.ts`) and shows `LoginForm` if that fails. The
-backend is single-admin — registration only works once — so the form shows
-"create admin account" or "sign in" based on `GET /auth/status`. Every
-protected API call goes through `authFetch()`, which attaches the bearer
-token and throws `AuthRequiredError` on a 401 so the dashboard can drop back
-to the login screen (expired session) without a special case at every call site.
+backend is multi-tenant — registration is always open and creates a new
+organization — so `LoginForm` has an explicit "sign in" / "create an
+organization" toggle rather than guessing which to show; register mode adds
+an organization name field. Every protected API call goes through
+`authFetch()`, which attaches the bearer token and throws `AuthRequiredError`
+on a 401 so the dashboard can drop back to the login screen (expired
+session) without a special case at every call site.
 
 ## Internationalization
 

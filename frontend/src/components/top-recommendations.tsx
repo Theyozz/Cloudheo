@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Box, CircleAlert, Database, HardDrive, ListChecks, LoaderCircle, Server, Sparkles, type LucideIcon } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { formatUsd } from "@/lib/format";
 import { explainRecommendation, type ApiRecommendation } from "@/lib/api";
@@ -27,6 +28,12 @@ type TopRecommendationsProps = {
 
 type ExplanationState = { status: "loading" | "done" | "error"; text?: string };
 
+const RESOURCE_ICONS: Record<string, LucideIcon> = {
+  EC2: Server,
+  EBS: HardDrive,
+  RDS: Database,
+};
+
 export function TopRecommendations({ data, selectedIds, onToggle }: TopRecommendationsProps) {
   const { t } = useLanguage();
   const [explanations, setExplanations] = useState<Record<string, ExplanationState>>({});
@@ -43,63 +50,104 @@ export function TopRecommendations({ data, selectedIds, onToggle }: TopRecommend
   }
 
   return (
-    <div className="rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--surface-1)] p-5">
-      <h2 className="text-sm font-medium text-[color:var(--text-secondary)]">
-        {t("top_recommendations_title")}
-      </h2>
-      {data.length === 0 && <p className="mt-4 text-sm text-[color:var(--text-muted)]">{t("no_recommendations")}</p>}
-      <ul className="mt-4 flex flex-col divide-y divide-[color:var(--border-hairline)]">
+    <div className="panel h-full min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="panel-heading min-w-0">
+          <span className="icon-box shrink-0" aria-hidden="true">
+            <ListChecks size={18} strokeWidth={1.7} />
+          </span>
+          <span className="min-w-0 [overflow-wrap:anywhere]">{t("top_recommendations_title")}</span>
+        </h2>
+        <span className="soft-badge tabular-nums">
+          <span className="sr-only">{t("stat_recommendations")}: </span>
+          {data.length}
+        </span>
+      </div>
+      <p className="muted-label mt-4">{t("stat_savings")}</p>
+      {data.length === 0 && (
+        <p className="mt-6 rounded-xl border border-dashed border-[color:var(--border-hairline)] bg-[color:var(--surface-2)] px-4 py-8 text-center text-sm leading-relaxed text-[color:var(--text-secondary)]">
+          {t("no_recommendations")}
+        </p>
+      )}
+      <ul className="mt-5 flex min-w-0 flex-col gap-3">
         {data.map((rec) => {
           const explanation = explanations[rec.resourceId];
+          const selected = selectedIds.has(rec.resourceId);
+          const ResourceIcon = RESOURCE_ICONS[rec.resourceType] ?? Box;
           return (
-            <li key={rec.resourceId} className="flex flex-col gap-2 py-3 first:pt-1 last:pb-1">
-              <div className="flex items-center justify-between gap-4">
-                <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(rec.resourceId)}
-                    onChange={() => onToggle(rec.resourceId)}
-                    className="mt-1 h-4 w-4 shrink-0 accent-[color:var(--accent)]"
-                  />
-                  <span className="min-w-0">
-                    <p className="text-sm font-medium">
-                      {rec.resourceType} · {rec.resourceId}
-                    </p>
-                    <p className="text-xs text-[color:var(--text-muted)]">
-                      {rec.category} · {t("confidence_label", { percent: Math.round(rec.confidence * 100) })}
-                    </p>
+            <li
+              key={rec.resourceId}
+              className="min-w-0 rounded-xl border border-[color:var(--border-hairline)] p-4 motion-safe:transition-colors"
+              style={selected ? {
+                backgroundColor: "var(--accent-soft)",
+                borderColor: "color-mix(in srgb, var(--accent) 35%, var(--border-hairline))",
+              } : undefined}
+            >
+              <label className="flex min-w-0 cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={selected}
+                  onChange={() => onToggle(rec.resourceId)}
+                  className="mt-1.5 h-4 w-4 shrink-0 cursor-pointer accent-[color:var(--accent)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--accent)]"
+                />
+                <span className="block min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-center gap-2 text-[color:var(--text-secondary)]">
+                      <ResourceIcon size={15} strokeWidth={1.7} className="shrink-0" aria-hidden="true" />
+                      <span className="mono-label min-w-0 [overflow-wrap:anywhere]">{rec.resourceType}</span>
+                    </span>
+                    <RiskBadge risk={rec.risk} />
                   </span>
-                </label>
-                <div className="flex shrink-0 items-center gap-3">
-                  <span className="text-sm font-medium tabular-nums" style={{ color: "var(--status-good)" }}>
-                    -{formatUsd(rec.monthlySaving)}/mo
+                  <span className="mt-2 block font-mono text-[13px] leading-relaxed font-medium text-[color:var(--foreground)] [overflow-wrap:anywhere]">
+                    {rec.resourceId}
                   </span>
-                  <RiskBadge risk={rec.risk} />
-                </div>
-              </div>
+                  <span className="muted-label mt-1 block leading-relaxed [overflow-wrap:anywhere]">
+                    {rec.category}
+                  </span>
+                  <span className="mt-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2">
+                    <span className="muted-label [overflow-wrap:anywhere]">
+                      {t("confidence_label", { percent: Math.round(rec.confidence * 100) })}
+                    </span>
+                    <span className="text-base font-semibold tracking-tight tabular-nums text-[color:var(--status-good)] [overflow-wrap:anywhere]">
+                      <span className="sr-only">{t("stat_savings")}: </span>
+                      -{formatUsd(rec.monthlySaving)}
+                    </span>
+                  </span>
+                </span>
+              </label>
 
               {rec.explainPayload && (
-                <div className="ml-7">
+                <div className="mt-3 ml-7 min-w-0">
                   {!explanation && (
                     <button
                       type="button"
                       onClick={() => handleExplain(rec)}
-                      className="text-xs text-[color:var(--accent)] hover:underline"
+                      className="inline-flex min-h-9 max-w-full cursor-pointer items-center gap-1.5 rounded-lg border border-[color:var(--border-hairline)] px-3 py-1.5 text-xs font-medium text-[color:var(--accent)] hover:bg-[color:var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--accent)] motion-safe:transition-colors"
                     >
-                      ✨ {t("explain_button")}
+                      <Sparkles size={13} className="shrink-0" aria-hidden="true" />
+                      {t("explain_button")}
+                      <span className="sr-only">: {rec.resourceId}</span>
                     </button>
                   )}
-                  {explanation?.status === "loading" && (
-                    <p className="text-xs text-[color:var(--text-muted)]">{t("explain_loading")}</p>
-                  )}
-                  {explanation?.status === "error" && (
-                    <p className="text-xs" style={{ color: "var(--status-critical)" }}>
-                      {t("explain_error")}
-                    </p>
-                  )}
-                  {explanation?.status === "done" && (
-                    <p className="max-w-xl text-xs text-[color:var(--text-secondary)]">{explanation.text}</p>
-                  )}
+                  <div aria-live="polite" aria-atomic="true">
+                    {explanation?.status === "loading" && (
+                      <p className="flex items-center gap-2 text-xs text-[color:var(--text-secondary)]">
+                        <LoaderCircle size={14} className="shrink-0 motion-safe:animate-spin" aria-hidden="true" />
+                        {t("explain_loading")}
+                      </p>
+                    )}
+                    {explanation?.status === "error" && (
+                      <p className="flex items-start gap-2 text-xs leading-relaxed" style={{ color: "var(--status-critical, #a34d43)" }}>
+                        <CircleAlert size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
+                        {t("explain_error")}
+                      </p>
+                    )}
+                    {explanation?.status === "done" && (
+                      <p className="rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--surface-2)] p-3 text-sm leading-relaxed whitespace-pre-line text-[color:var(--text-secondary)] [overflow-wrap:anywhere]">
+                        {explanation.text}
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </li>

@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cloudheo — Cloud Cost Optimization",
-  description: "Detect, explain and eliminate unnecessary AWS spend.",
+  title: "Cloudheo — Cut your AWS bill, read-only",
+  description:
+    "Cloudheo scans your AWS account read-only, finds the resources you pay for but don't need, and puts a number on every saving.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

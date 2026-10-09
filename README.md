@@ -29,8 +29,8 @@ employees, mostly on AWS, €5k–50k/month cloud spend, no dedicated FinOps tea
 ## Status
 
 Early MVP, **read-only only** — Cloudheo never modifies or deletes anything in a
-connected AWS account. Current focus: finishing Sprint 6 (multi-tenant,
-audit logs) and starting to talk to prospects.
+connected AWS account. Current focus: hardening the product before deploying
+it or talking to prospects.
 
 | Sprint | Scope | Status |
 |---|---|---|
@@ -39,7 +39,7 @@ audit logs) and starting to talk to prospects.
 | 3 — FinOps Engine | Rightsizing, unattached volumes, orphaned snapshots, stopped-instance storage, non-prod scheduling | ✅ Done, 6 deterministic rules |
 | 4 — Dashboard | Wire the UI to real data, connect/disconnect flow, savings simulator | ✅ Done |
 | 5 — AI | Per-recommendation natural-language explanations (Claude Haiku) | ✅ Done, live-tested |
-| 6 — Beta | Auth ✅ (single admin, JWT) · landing page ✅ · audit logs ⬜ · multi-tenant Organizations ⬜ · first prospects ⬜ | 🟡 In progress |
+| 6 — Beta | Auth ✅ (JWT) · landing page ✅ · multi-tenant Organizations ✅ · audit logs ✅ · deployment ⬜ · first prospects ⬜ | 🟡 In progress |
 
 CI runs the backend test suite (including Alembic migrations against a real
 Postgres) and the frontend lint/build on every push — see the badges above.
@@ -126,6 +126,7 @@ for details on each side.
   contextualize numbers that were already computed.
 - **Secrets stay in `.env` files**, which are git-ignored. Never commit real
   AWS keys, database passwords, or API tokens.
-- **The API requires authentication.** Every route except `/health` and
-  `/auth/*` requires a valid JWT. The MVP is single-admin: only one account
-  can ever exist (`POST /auth/register` closes itself after first use).
+- **The API requires authentication and is multi-tenant.** Every route
+  except `/health` and `/auth/*` requires a valid JWT. Every customer is its
+  own `Organization`, and every connected AWS account is scoped to one —
+  there is no code path that reads across organizations.

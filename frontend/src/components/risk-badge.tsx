@@ -1,13 +1,20 @@
 "use client";
 
+import { ShieldAlert, ShieldCheck, TriangleAlert, type LucideIcon } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 
 type Risk = "LOW" | "MEDIUM" | "HIGH";
 
 const RISK_COLOR: Record<Risk, string> = {
   LOW: "var(--status-good)",
-  MEDIUM: "var(--status-warning)",
-  HIGH: "var(--status-critical)",
+  MEDIUM: "var(--status-warning, #8f642f)",
+  HIGH: "var(--status-critical, #a34d43)",
+};
+
+const RISK_ICON: Record<Risk, LucideIcon> = {
+  LOW: ShieldCheck,
+  MEDIUM: ShieldAlert,
+  HIGH: TriangleAlert,
 };
 
 const RISK_LABEL_KEY = {
@@ -18,14 +25,18 @@ const RISK_LABEL_KEY = {
 
 export function RiskBadge({ risk }: { risk: Risk }) {
   const { t } = useLanguage();
+  const Icon = RISK_ICON[risk];
 
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-hairline)] px-2.5 py-1 text-xs font-medium text-[color:var(--text-secondary)]">
-      <span
-        className="h-1.5 w-1.5 rounded-full"
-        style={{ backgroundColor: RISK_COLOR[risk] }}
-        aria-hidden
-      />
+    <span
+      className={`${risk === "LOW" ? "good-badge" : "soft-badge"} inline-flex items-center gap-1.5 whitespace-nowrap`}
+      style={{
+        color: RISK_COLOR[risk],
+        backgroundColor: `color-mix(in srgb, ${RISK_COLOR[risk]} 9%, var(--surface-1))`,
+        borderColor: `color-mix(in srgb, ${RISK_COLOR[risk]} 20%, var(--border-hairline))`,
+      }}
+    >
+      <Icon size={13} strokeWidth={1.8} className="shrink-0" aria-hidden="true" />
       {t(RISK_LABEL_KEY[risk])}
     </span>
   );

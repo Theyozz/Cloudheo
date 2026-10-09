@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.deps import get_current_user
 from app.models.aws_account import AwsAccount
+from app.models.user import User
 from app.schemas.dashboard import CategorySaving, DashboardSummaryResponse
 from app.services.aws import ec2
 from app.services.aws.cost_explorer import default_date_range, get_cost_by_service
@@ -12,16 +13,17 @@ from app.services.aws.inventory import fetch_inventory
 from app.services.aws.sts import AssumeRoleError, assume_role, session_from_assumed_credentials
 from app.services.finops.rules import evaluate_all
 
-router = APIRouter(prefix="/dashboard", tags=["dashboard"], dependencies=[Depends(get_current_user)])
+router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 TOP_RECOMMENDATIONS_LIMIT = 10
 
 
 @router.get("/summary", response_model=DashboardSummaryResponse)
-def get_dashboard_summary(db: Session = Depends(get_db)):
+def get_dashboard_summary(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """One-call summary for the dashboard: spend, potential savings, and
-    top recommendations for the currently connected AWS account."""
-    account = db.query(AwsAccount).first()
+    top recommendations for the organization's currently connected AWS
+    account."""
+    account = db.query(AwsAccount).filter(AwsAccount.organization_id == current_user.organization_id).first()
     if account is None:
         return DashboardSummaryResponse(connected=False)
 

@@ -1,145 +1,249 @@
 "use client";
 
 import Link from "next/link";
+import {
+  Archive,
+  ArrowDown,
+  ArrowUpRight,
+  Calculator,
+  Check,
+  CheckCheck,
+  ChevronDown,
+  CircleCheck,
+  Cloud,
+  Database,
+  Eye,
+  Gauge,
+  HardDrive,
+  KeyRound,
+  Moon,
+  PlugZap,
+  PowerOff,
+  ScanLine,
+  Server,
+  ShieldCheck,
+  SlidersHorizontal,
+  UserCheck,
+  Workflow,
+  type LucideIcon,
+} from "lucide-react";
+import { Brand } from "@/components/brand";
+import { CloudOrbit } from "@/components/cloud-orbit";
+import { ProductPreview } from "@/components/product-preview";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { useLanguage, type TranslationKey } from "@/lib/i18n";
+import { LandingTheme, ThemeSwitcher } from "@/components/landing-theme";
+import { LocalizedText, type TranslationKey } from "@/lib/i18n";
 
 const CONTACT_EMAIL = "theomaurin875@gmail.com";
 const CONTACT_SUBJECT = encodeURIComponent("Free AWS audit — Cloudheo");
 const MAILTO = `mailto:${CONTACT_EMAIL}?subject=${CONTACT_SUBJECT}`;
 
-type Step = {
+type ContentItem = {
   titleKey: TranslationKey;
   descKey: TranslationKey;
-  live: boolean;
+  icon: LucideIcon;
 };
 
-const STEPS: Step[] = [
-  { titleKey: "landing_step_detect_title", descKey: "landing_step_detect_desc", live: true },
-  { titleKey: "landing_step_explain_title", descKey: "landing_step_explain_desc", live: true },
-  { titleKey: "landing_step_simulate_title", descKey: "landing_step_simulate_desc", live: true },
-  { titleKey: "landing_step_approve_title", descKey: "landing_step_approve_desc", live: false },
-  { titleKey: "landing_step_fix_title", descKey: "landing_step_fix_desc", live: false },
-  { titleKey: "landing_step_verify_title", descKey: "landing_step_verify_desc", live: false },
+const SERVICES: { name: string; icon: LucideIcon }[] = [
+  { name: "Amazon EC2", icon: Server },
+  { name: "Amazon RDS", icon: Database },
+  { name: "Amazon EBS", icon: HardDrive },
+  { name: "EBS Snapshots", icon: Archive },
+];
+
+const FINDINGS: (ContentItem & { services: string })[] = [
+  { titleKey: "landing_finding_rightsizing_title", descKey: "landing_finding_rightsizing_desc", icon: Gauge, services: "EC2 · RDS" },
+  { titleKey: "landing_finding_nonprod_title", descKey: "landing_finding_nonprod_desc", icon: Moon, services: "EC2 · RDS" },
+  { titleKey: "landing_finding_unattached_title", descKey: "landing_finding_unattached_desc", icon: HardDrive, services: "EBS" },
+  { titleKey: "landing_finding_stopped_title", descKey: "landing_finding_stopped_desc", icon: PowerOff, services: "EC2 · EBS" },
+  { titleKey: "landing_finding_snapshot_title", descKey: "landing_finding_snapshot_desc", icon: Archive, services: "EBS" },
+];
+
+const STEPS: ContentItem[] = [
+  { titleKey: "landing_step_connect_title", descKey: "landing_step_connect_desc", icon: PlugZap },
+  { titleKey: "landing_step_analyze_title", descKey: "landing_step_analyze_desc", icon: ScanLine },
+  { titleKey: "landing_step_decide_title", descKey: "landing_step_decide_desc", icon: SlidersHorizontal },
+];
+
+const ROADMAP: ContentItem[] = [
+  { titleKey: "landing_step_approve_title", descKey: "landing_step_approve_desc", icon: CheckCheck },
+  { titleKey: "landing_step_fix_title", descKey: "landing_step_fix_desc", icon: Workflow },
+  { titleKey: "landing_step_verify_title", descKey: "landing_step_verify_desc", icon: CircleCheck },
+];
+
+const AUDIENCE_STATS: { valueKey: TranslationKey; labelKey: TranslationKey }[] = [
+  { valueKey: "landing_audience_stat_size_value", labelKey: "landing_audience_stat_size_label" },
+  { valueKey: "landing_audience_stat_spend_value", labelKey: "landing_audience_stat_spend_label" },
+  { valueKey: "landing_audience_stat_cloud_value", labelKey: "landing_audience_stat_cloud_label" },
+  { valueKey: "landing_audience_stat_team_value", labelKey: "landing_audience_stat_team_label" },
+];
+
+const SECURITY_PRINCIPLES: ContentItem[] = [
+  { titleKey: "landing_security_principle_readonly_title", descKey: "landing_security_principle_readonly_desc", icon: Eye },
+  { titleKey: "landing_security_principle_credentials_title", descKey: "landing_security_principle_credentials_desc", icon: KeyRound },
+  { titleKey: "landing_security_principle_revocable_title", descKey: "landing_security_principle_revocable_desc", icon: PowerOff },
+  { titleKey: "landing_security_principle_consent_title", descKey: "landing_security_principle_consent_desc", icon: UserCheck },
+];
+
+const FAQ: { questionKey: TranslationKey; answerKey: TranslationKey }[] = [
+  { questionKey: "landing_faq_audit_q", answerKey: "landing_faq_audit_a" },
+  { questionKey: "landing_faq_changes_q", answerKey: "landing_faq_changes_a" },
+  { questionKey: "landing_faq_services_q", answerKey: "landing_faq_services_a" },
+  { questionKey: "landing_faq_ai_q", answerKey: "landing_faq_ai_a" },
 ];
 
 function PrimaryButton({ children }: { children: React.ReactNode }) {
   return (
-    <a
-      href={MAILTO}
-      className="inline-flex items-center justify-center rounded-md bg-[color:var(--foreground)] px-5 py-2.5 text-sm font-medium text-[color:var(--background)] hover:opacity-90"
-    >
-      {children}
+    <a href={MAILTO} className="button button-primary">
+      {children}<ArrowUpRight size={16} aria-hidden="true" />
     </a>
   );
 }
 
 export default function LandingPage() {
-  const { t } = useLanguage();
-
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b border-[color:var(--border-hairline)]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[color:var(--foreground)] text-sm font-semibold text-[color:var(--background)]">
-              C
-            </span>
-            <span className="text-base font-semibold tracking-tight">Cloudheo</span>
-          </div>
-          <nav className="hidden items-center gap-6 text-sm text-[color:var(--text-secondary)] sm:flex">
-            <a href="#how" className="hover:text-[color:var(--foreground)]">
-              {t("landing_nav_how")}
-            </a>
-            <a href="#security" className="hover:text-[color:var(--foreground)]">
-              {t("landing_nav_security")}
-            </a>
+    <LandingTheme>
+      <a href="#main-content" className="skip-link"><LocalizedText id="skip_to_content" /></a>
+      <header className="site-header">
+        <div className="site-container header-inner">
+          <Brand />
+          <nav className="desktop-nav">
+            <a href="#findings"><LocalizedText id="landing_nav_findings" /></a>
+            <a href="#how"><LocalizedText id="landing_nav_how" /></a>
+            <a href="#security"><LocalizedText id="landing_nav_security" /></a>
+            <a href="#faq"><LocalizedText id="landing_nav_faq" /></a>
           </nav>
-          <div className="flex items-center gap-4">
+          <div className="header-actions">
+            <ThemeSwitcher />
             <LanguageSwitcher />
-            <span className="text-[color:var(--border-hairline)]">|</span>
-            <Link href="/app" className="text-sm text-[color:var(--text-secondary)] hover:text-[color:var(--foreground)]">
-              {t("landing_nav_login")}
+            <Link href="/app" className="button button-small button-outline">
+              <LocalizedText id="landing_nav_login" /><ArrowUpRight size={14} aria-hidden="true" />
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="mx-auto max-w-4xl px-6 py-20 text-center sm:py-28">
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">{t("landing_hero_title")}</h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base text-[color:var(--text-secondary)] sm:text-lg">
-            {t("landing_hero_subtitle")}
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <PrimaryButton>{t("landing_cta_primary")}</PrimaryButton>
-            <a href="#how" className="text-sm text-[color:var(--text-secondary)] hover:text-[color:var(--foreground)]">
-              {t("landing_cta_secondary")} ↓
-            </a>
+      <main id="main-content">
+        <section className="hero-section site-container">
+          <div className="hero-copy">
+            <p className="eyebrow"><span className="status-dot" /><LocalizedText id="landing_eyebrow" /></p>
+            <h1><LocalizedText id="landing_hero_line" accentId="landing_hero_accent" /></h1>
+            <p className="hero-description"><LocalizedText id="landing_hero_description" /></p>
+            <div className="hero-actions">
+              <PrimaryButton><LocalizedText id="landing_cta_primary" /></PrimaryButton>
+              <a href="#findings" className="text-link"><LocalizedText id="landing_cta_secondary" /><ArrowDown size={15} aria-hidden="true" /></a>
+            </div>
+            <div className="hero-trust">
+              <span><ShieldCheck size={14} aria-hidden="true" /><LocalizedText id="landing_trust_readonly" /></span>
+              <span><KeyRound size={14} aria-hidden="true" /><LocalizedText id="landing_trust_keys" /></span>
+              <span><Check size={14} aria-hidden="true" /><LocalizedText id="landing_trust_free" /></span>
+            </div>
+          </div>
+          <ProductPreview />
+        </section>
+
+        <div className="service-strip site-container">
+          <p><LocalizedText id="landing_services" /></p>
+          <div>{SERVICES.map(({ name, icon: Icon }) => <span key={name}><Icon size={22} strokeWidth={1.4} aria-hidden="true" />{name}</span>)}</div>
+        </div>
+
+        <section id="findings" className="site-container section-space">
+          <div className="section-heading-row">
+            <div><p className="eyebrow"><LocalizedText id="landing_findings_eyebrow" /></p><h2 className="section-title"><LocalizedText id="landing_findings_title" /></h2></div>
+            <p className="section-description"><LocalizedText id="landing_findings_description" /></p>
+          </div>
+          <div className="findings-grid">
+            {FINDINGS.map(({ titleKey, descKey, icon: Icon, services }) => (
+              <article key={titleKey} className="finding-card">
+                <div className="finding-card-top">
+                  <span className="icon-box" aria-hidden="true"><Icon size={18} strokeWidth={1.6} /></span>
+                  <span className="mono-label finding-services">{services}</span>
+                </div>
+                <h3><LocalizedText id={titleKey} /></h3>
+                <p><LocalizedText id={descKey} /></p>
+              </article>
+            ))}
+            <article className="finding-card finding-note">
+              <span className="icon-box" aria-hidden="true"><Calculator size={18} strokeWidth={1.6} /></span>
+              <h3><LocalizedText id="landing_finding_note_title" /></h3>
+              <p><LocalizedText id="landing_finding_note_desc" /></p>
+            </article>
           </div>
         </section>
 
-        {/* Loop */}
-        <section id="how" className="border-t border-[color:var(--border-hairline)] bg-[color:var(--surface-1)] py-16">
-          <div className="mx-auto max-w-6xl px-6">
-            <h2 className="text-2xl font-semibold tracking-tight">{t("landing_loop_title")}</h2>
-            <p className="mt-2 max-w-2xl text-sm text-[color:var(--text-secondary)]">{t("landing_loop_subtitle")}</p>
-            <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {STEPS.map((step, i) => (
-                <div
-                  key={step.titleKey}
-                  className="rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--background)] p-5"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-[color:var(--text-muted)]">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    {!step.live && (
-                      <span className="rounded-full border border-[color:var(--border-hairline)] px-2 py-0.5 text-[10px] text-[color:var(--text-muted)]">
-                        {t("landing_step_soon")}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="mt-3 text-sm font-semibold">{t(step.titleKey)}</h3>
-                  <p className="mt-1 text-sm text-[color:var(--text-secondary)]">{t(step.descKey)}</p>
-                </div>
+        <section id="how" className="workflow-section section-space">
+          <div className="site-container">
+            <div className="section-heading-row">
+              <div><p className="eyebrow"><LocalizedText id="landing_how_eyebrow" /></p><h2 className="section-title"><LocalizedText id="landing_how_title" /></h2></div>
+              <p className="section-description"><LocalizedText id="landing_how_description" /></p>
+            </div>
+            <ol className="workflow-grid">
+              {STEPS.map(({ titleKey, descKey, icon: Icon }, i) => (
+                <li key={titleKey} className="workflow-card">
+                  <div className="workflow-card-top"><span className="workflow-icon" aria-hidden="true"><Icon size={23} strokeWidth={1.5} /></span><span className="step-number" aria-hidden="true">0{i + 1}</span></div>
+                  <h3><LocalizedText id={titleKey} /></h3>
+                  <p><LocalizedText id={descKey} /></p>
+                </li>
+              ))}
+            </ol>
+            <div className="roadmap">
+              <div className="roadmap-label"><span className="mono-label"><LocalizedText id="landing_next" /></span><span className="soft-badge"><LocalizedText id="landing_step_soon" /></span></div>
+              {ROADMAP.map(({ titleKey, descKey, icon: Icon }) => (
+                <div className="roadmap-step" key={titleKey}><Icon size={17} aria-hidden="true" /><div><h3><LocalizedText id={titleKey} /></h3><p><LocalizedText id={descKey} /></p></div></div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Audience */}
-        <section className="mx-auto max-w-4xl px-6 py-16 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight">{t("landing_audience_title")}</h2>
-          <p className="mx-auto mt-3 max-w-2xl text-sm text-[color:var(--text-secondary)]">
-            {t("landing_audience_body")}
-          </p>
-        </section>
-
-        {/* Security */}
-        <section
-          id="security"
-          className="border-t border-[color:var(--border-hairline)] bg-[color:var(--surface-1)] py-16"
-        >
-          <div className="mx-auto max-w-3xl px-6 text-center">
-            <h2 className="text-2xl font-semibold tracking-tight">{t("landing_security_title")}</h2>
-            <p className="mt-3 text-sm text-[color:var(--text-secondary)]">{t("landing_security_body")}</p>
+        <section className="audience-section site-container section-space">
+          <div><p className="eyebrow"><LocalizedText id="landing_audience_eyebrow" /></p><h2 className="section-title"><LocalizedText id="landing_audience_heading" /></h2><p className="section-description"><LocalizedText id="landing_audience_description" /></p></div>
+          <div className="audience-stats">
+            {AUDIENCE_STATS.map((stat) => <div key={stat.valueKey}><p><LocalizedText id={stat.valueKey} /></p><span><LocalizedText id={stat.labelKey} /></span></div>)}
           </div>
         </section>
 
-        {/* Final CTA */}
-        <section className="mx-auto max-w-3xl px-6 py-20 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("landing_final_cta_title")}</h2>
-          <div className="mt-6">
-            <PrimaryButton>{t("landing_cta_primary")}</PrimaryButton>
+        <section id="security" className="security-section">
+          <div className="site-container security-grid">
+            <div className="security-intro">
+              <p className="eyebrow"><LocalizedText id="landing_security_eyebrow" /></p>
+              <h2 className="section-title"><LocalizedText id="landing_security_heading" /></h2>
+              <p className="section-description"><LocalizedText id="landing_security_description" /></p>
+              <CloudOrbit />
+              <p className="security-signature"><ShieldCheck size={14} aria-hidden="true" /><LocalizedText id="landing_security_note" /></p>
+            </div>
+            <div className="security-principles">
+              {SECURITY_PRINCIPLES.map(({ titleKey, descKey, icon: Icon }) => (
+                <article key={titleKey} className="security-principle"><span className="security-icon" aria-hidden="true"><Icon size={19} strokeWidth={1.6} /></span><div><h3><LocalizedText id={titleKey} /></h3><p><LocalizedText id={descKey} /></p></div></article>
+              ))}
+            </div>
           </div>
+        </section>
+
+        <section id="faq" className="faq-section site-container section-space">
+          <div><p className="eyebrow"><LocalizedText id="landing_faq_eyebrow" /></p><h2 className="section-title"><LocalizedText id="landing_faq_title" /></h2></div>
+          <div className="faq-list">
+            {FAQ.map(({ questionKey, answerKey }) => (
+              <details key={questionKey} className="faq-item">
+                <summary><LocalizedText id={questionKey} /><ChevronDown size={16} aria-hidden="true" /></summary>
+                <p><LocalizedText id={answerKey} /></p>
+              </details>
+            ))}
+          </div>
+        </section>
+
+        <section className="final-cta site-container section-space">
+          <span className="cta-cloud" aria-hidden="true"><Cloud size={29} strokeWidth={1.4} /></span>
+          <p className="eyebrow"><LocalizedText id="landing_final_eyebrow" /></p>
+          <h2><LocalizedText id="landing_final_heading" /></h2>
+          <p className="section-description"><LocalizedText id="landing_final_description" /></p>
+          <PrimaryButton><LocalizedText id="landing_cta_primary" /></PrimaryButton>
+          <span className="cta-reassurance"><ShieldCheck size={13} aria-hidden="true" /><LocalizedText id="landing_trust_readonly" /> · <LocalizedText id="landing_trust_keys" /></span>
         </section>
       </main>
 
-      <footer className="border-t border-[color:var(--border-hairline)] py-4">
-        <p className="mx-auto max-w-6xl px-6 text-xs text-[color:var(--text-muted)]">{t("landing_footer")}</p>
+      <footer className="site-footer">
+        <div className="site-container footer-inner"><Brand /><p><LocalizedText id="landing_footer_note" /></p><span><LocalizedText id="landing_footer" /></span></div>
       </footer>
-    </div>
+    </LandingTheme>
   );
 }

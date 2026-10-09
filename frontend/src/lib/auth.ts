@@ -52,17 +52,11 @@ export async function authFetch(path: string, options: RequestInit = {}): Promis
   return res;
 }
 
-export async function getAuthStatus(): Promise<{ registered: boolean }> {
-  const res = await fetch(`${API_URL}/auth/status`, { cache: "no-store" });
-  if (!res.ok) throw new Error(await parseErrorDetail(res));
-  return res.json();
-}
-
-export async function register(email: string, password: string): Promise<void> {
+export async function register(organizationName: string, email: string, password: string): Promise<void> {
   const res = await fetch(`${API_URL}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ organization_name: organizationName, email, password }),
   });
   if (!res.ok) throw new Error(await parseErrorDetail(res));
   const body = await res.json();

@@ -1,39 +1,50 @@
+ORG_NAME = "Acme Inc"
 EMAIL = "admin@cloudheo.dev"
 PASSWORD = "supersecret123"
 
 
-def test_status_reports_unregistered_initially(unauthenticated_client):
-    resp = unauthenticated_client.get("/auth/status")
-    assert resp.status_code == 200
-    assert resp.json()["registered"] is False
-
-
-def test_register_then_status_reports_registered(unauthenticated_client):
-    unauthenticated_client.post("/auth/register", json={"email": EMAIL, "password": PASSWORD})
-
-    resp = unauthenticated_client.get("/auth/status")
-    assert resp.json()["registered"] is True
-
-
 def test_register_returns_usable_token(unauthenticated_client):
-    resp = unauthenticated_client.post("/auth/register", json={"email": EMAIL, "password": PASSWORD})
+    resp = unauthenticated_client.post(
+        "/auth/register", json={"organization_name": ORG_NAME, "email": EMAIL, "password": PASSWORD}
+    )
     assert resp.status_code == 201
     token = resp.json()["access_token"]
 
     me = unauthenticated_client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert me.status_code == 200
     assert me.json()["email"] == EMAIL
+    assert me.json()["organization_id"]
 
 
-def test_second_registration_is_rejected(unauthenticated_client):
-    unauthenticated_client.post("/auth/register", json={"email": EMAIL, "password": PASSWORD})
+def test_second_organization_can_register(unauthenticated_client):
+    """Registration stays open after the first signup — a second customer
+    must be able to create their own organization."""
+    unauthenticated_client.post(
+        "/auth/register", json={"organization_name": ORG_NAME, "email": EMAIL, "password": PASSWORD}
+    )
 
-    resp = unauthenticated_client.post("/auth/register", json={"email": "other@cloudheo.dev", "password": PASSWORD})
-    assert resp.status_code == 403
+    resp = unauthenticated_client.post(
+        "/auth/register",
+        json={"organization_name": "Other Co", "email": "other@cloudheo.dev", "password": PASSWORD},
+    )
+    assert resp.status_code == 201
+
+
+def test_duplicate_email_is_rejected(unauthenticated_client):
+    unauthenticated_client.post(
+        "/auth/register", json={"organization_name": ORG_NAME, "email": EMAIL, "password": PASSWORD}
+    )
+
+    resp = unauthenticated_client.post(
+        "/auth/register", json={"organization_name": "Other Co", "email": EMAIL, "password": PASSWORD}
+    )
+    assert resp.status_code == 409
 
 
 def test_login_with_correct_password_succeeds(unauthenticated_client):
-    unauthenticated_client.post("/auth/register", json={"email": EMAIL, "password": PASSWORD})
+    unauthenticated_client.post(
+        "/auth/register", json={"organization_name": ORG_NAME, "email": EMAIL, "password": PASSWORD}
+    )
 
     resp = unauthenticated_client.post("/auth/login", json={"email": EMAIL, "password": PASSWORD})
     assert resp.status_code == 200
@@ -41,7 +52,9 @@ def test_login_with_correct_password_succeeds(unauthenticated_client):
 
 
 def test_login_with_wrong_password_is_rejected(unauthenticated_client):
-    unauthenticated_client.post("/auth/register", json={"email": EMAIL, "password": PASSWORD})
+    unauthenticated_client.post(
+        "/auth/register", json={"organization_name": ORG_NAME, "email": EMAIL, "password": PASSWORD}
+    )
 
     resp = unauthenticated_client.post("/auth/login", json={"email": EMAIL, "password": "wrongpassword"})
     assert resp.status_code == 401
@@ -69,5 +82,7 @@ def test_protected_route_with_valid_token_succeeds(client):
 
 
 def test_short_password_is_rejected(unauthenticated_client):
-    resp = unauthenticated_client.post("/auth/register", json={"email": EMAIL, "password": "short"})
+    resp = unauthenticated_client.post(
+        "/auth/register", json={"organization_name": ORG_NAME, "email": EMAIL, "password": "short"}
+    )
     assert resp.status_code == 422

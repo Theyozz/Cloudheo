@@ -31,8 +31,7 @@ export function ConnectAwsForm({ onConnected, onCancel }: { onConnected: () => v
     }
   }
 
-  const inputClass =
-    "w-full rounded-md border border-[color:var(--border-hairline)] bg-[color:var(--background)] px-3 py-2 text-sm outline-none focus:border-[color:var(--accent)]";
+  const inputClass = "field-input";
 
   return (
     <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
@@ -54,13 +53,15 @@ export function ConnectAwsForm({ onConnected, onCancel }: { onConnected: () => v
       <button
         type="button"
         onClick={() => setShowAdvanced((v) => !v)}
+        aria-expanded={showAdvanced}
+        aria-controls="aws-advanced-options"
         className="self-start text-xs text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]"
       >
         {showAdvanced ? "▾" : "▸"} {t("connect_form_advanced")}
       </button>
 
       {showAdvanced && (
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <div id="aws-advanced-options" className="flex flex-col gap-3 sm:flex-row">
           <div className="flex-1">
             <label htmlFor="external_id" className="mb-1 block text-xs text-[color:var(--text-secondary)]">
               {t("connect_form_external_id_label")}
@@ -89,13 +90,13 @@ export function ConnectAwsForm({ onConnected, onCancel }: { onConnected: () => v
         </div>
       )}
 
-      {error && <p className="text-sm" style={{ color: "var(--status-critical)" }}>{error}</p>}
+      {error && <p role="alert" className="text-sm" style={{ color: "var(--status-critical)" }}>{error}</p>}
 
       <div className="flex items-center gap-3">
         <button
           type="submit"
           disabled={submitting || !roleArn.trim()}
-          className="rounded-md bg-[color:var(--foreground)] px-4 py-2 text-sm font-medium text-[color:var(--background)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="button button-primary button-small"
         >
           {submitting ? t("connect_form_connecting") : t("connect_form_submit")}
         </button>

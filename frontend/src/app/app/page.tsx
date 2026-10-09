@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { ArrowUpRight, Cloud, Layers3, LayoutDashboard, LoaderCircle, LogOut, RefreshCw, ShieldCheck, SlidersHorizontal, Sparkles, TrendingDown, Wallet } from "lucide-react";
+import { Brand } from "@/components/brand";
 import { BackendStatus } from "@/components/backend-status";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { LoginForm } from "@/components/login-form";
@@ -29,6 +31,7 @@ const CATEGORY_LABEL_KEYS: Record<string, TranslationKey> = {
 };
 
 export default function DashboardPage() {
+  const { t } = useLanguage();
   const [authChecked, setAuthChecked] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
@@ -49,7 +52,9 @@ export default function DashboardPage() {
     };
   }, []);
 
-  if (!authChecked) return null;
+  if (!authChecked) {
+    return <main className="dashboard-loading"><Brand /><p role="status" className="flex items-center gap-2"><LoaderCircle size={15} className="spin" />{t("loading_text")}</p></main>;
+  }
 
   if (!isAuthenticated) {
     return <LoginForm onAuthenticated={() => setIsAuthenticated(true)} />;
@@ -69,11 +74,16 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
   const { t } = useLanguage();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [disconnectError, setDisconnectError] = useState<string | null>(null);
+  const [disconnecting, setDisconnecting] = useState(false);
   const [showConnectForm, setShowConnectForm] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const reload = useCallback(() => {
     setLoading(true);
+    setLoadError(false);
+    setDisconnectError(null);
     fetchDashboardSummary()
       .then((data) => {
         setSummary(data);
@@ -84,7 +94,9 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
           onLoggedOut();
           return;
         }
+        setLoadError(true);
         setSummary(null);
+        setSelectedIds(new Set());
       })
       .finally(() => setLoading(false));
   }, [onLoggedOut]);
@@ -105,7 +117,9 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
           onLoggedOut();
           return;
         }
+        setLoadError(true);
         setSummary(null);
+        setSelectedIds(new Set());
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -132,8 +146,17 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
   }
 
   async function handleDisconnect() {
-    await disconnectAwsAccount();
-    reload();
+    setDisconnecting(true);
+    setDisconnectError(null);
+    try {
+      await disconnectAwsAccount();
+      reload();
+    } catch (err) {
+      if (err instanceof AuthRequiredError) onLoggedOut();
+      else setDisconnectError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDisconnecting(false);
+    }
   }
 
   const isConnected = summary?.connected ?? false;
@@ -210,115 +233,104 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
     .reduce((sum, rec) => sum + rec.monthlySaving, 0);
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b border-[color:var(--border-hairline)]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[color:var(--foreground)] text-sm font-semibold text-[color:var(--background)]">
-              C
-            </span>
-            <span className="text-base font-semibold tracking-tight">Cloudheo</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <BackendStatus />
-            <span className="text-[color:var(--border-hairline)]">|</span>
+    <div className="dashboard-page">
+      <a href="#overview" className="skip-link">{t("skip_to_content")}</a>
+      <header className="dashboard-header">
+        <div className="site-container header-inner">
+          <Brand />
+          <div className="dashboard-header-actions">
+            <div className="dashboard-api-status"><BackendStatus /></div>
             <LanguageSwitcher />
-            <span className="text-[color:var(--border-hairline)]">|</span>
             <button
               type="button"
               onClick={onLoggedOut}
-              className="text-sm text-[color:var(--text-secondary)] hover:text-[color:var(--foreground)]"
+              className="text-link dashboard-logout"
+              aria-label={t("auth_logout")}
             >
-              {t("auth_logout")}
+              <LogOut size={14} /><span>{t("auth_logout")}</span>
             </button>
           </div>
         </div>
+        <nav className="site-container dashboard-nav" aria-label={t("nav_dashboard")}>
+          <div className="dashboard-nav-links">
+            <a href="#overview"><LayoutDashboard size={15} />{t("dashboard_overview")}</a>
+            <a href="#optimizations"><Sparkles size={15} />{t("dashboard_optimizations")}</a>
+            <a href="#simulator"><SlidersHorizontal size={15} />{t("dashboard_simulator")}</a>
+          </div>
+          <span><ShieldCheck size={13} />{t("dashboard_readonly")}</span>
+        </nav>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
-        <div className="flex items-center justify-between gap-4">
+      <main id="overview" className="site-container dashboard-main" aria-busy={loading}>
+        <div className="dashboard-heading">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{t("dashboard_title")}</h1>
-            <p className="mt-1 text-sm text-[color:var(--text-secondary)]">{t("dashboard_subtitle")}</p>
+            <p className="eyebrow">{t("dashboard_eyebrow")}</p>
+            <h1>{t("dashboard_title")}</h1>
+            <p>{t("dashboard_subtitle")}</p>
           </div>
-          {!loading && (
-            <span className="shrink-0 rounded-full border border-[color:var(--border-hairline)] px-3 py-1 text-xs text-[color:var(--text-muted)]">
-              {isConnected
-                ? t("connected_badge", { account: summary!.aws_account_id ?? "" })
-                : t("sample_data_badge")}
+          <div className="dashboard-heading-actions">
+            <span className={isConnected ? "good-badge" : "soft-badge"} role="status">
+              {loading ? t("loading_text") : isConnected ? t("connected_badge", { account: summary!.aws_account_id ?? "" }) : t("sample_data_badge")}
             </span>
-          )}
+            <button type="button" onClick={reload} disabled={loading || disconnecting} className="refresh-button" aria-label={t("dashboard_refresh")} title={t("dashboard_refresh")}><RefreshCw size={14} className={loading ? "spin" : undefined} /></button>
+          </div>
         </div>
+        {loadError && <p role="alert" className="error-notice">{t("dashboard_load_error")}</p>}
+        {disconnectError && <p role="alert" className="error-notice">{disconnectError}</p>}
 
         {/* AWS connection */}
-        <section className="mt-6 rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--surface-1)] p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-medium">{t("connect_aws_title")}</h2>
-              <p className="mt-1 max-w-xl text-sm text-[color:var(--text-secondary)]">
-                {t("connect_aws_description")}
-              </p>
-              {!isConnected && showConnectForm && (
-                <ConnectAwsForm
-                  onConnected={() => {
-                    setShowConnectForm(false);
-                    reload();
-                  }}
-                  onCancel={() => setShowConnectForm(false)}
-                />
+        <section className="connection-panel">
+          <span className="icon-box"><Cloud size={20} strokeWidth={1.5} /></span>
+          <div className="connection-content">
+            <div className="connection-row">
+              <div className="connection-copy">
+                <h2>{isConnected ? t("dashboard_connection_active") : showConnectForm ? t("connect_aws_title") : t("dashboard_sample_title")}</h2>
+                <p>{isConnected || showConnectForm ? t("connect_aws_description") : t("dashboard_sample_description")}</p>
+              </div>
+              {isConnected ? (
+                <button type="button" onClick={handleDisconnect} disabled={disconnecting || loading} className="button button-outline button-small">
+                  {disconnecting ? <LoaderCircle size={14} className="spin" /> : null}{t("disconnect_button")}
+                </button>
+              ) : !showConnectForm && (
+                <button type="button" onClick={() => setShowConnectForm(true)} disabled={loading} className="button button-primary button-small">{t("connect_aws_button")}<ArrowUpRight size={14} /></button>
               )}
             </div>
-            {isConnected ? (
-              <button
-                type="button"
-                onClick={handleDisconnect}
-                className="shrink-0 rounded-md border border-[color:var(--border-hairline)] px-4 py-2 text-sm font-medium text-[color:var(--text-secondary)] hover:text-[color:var(--foreground)]"
-              >
-                {t("disconnect_button")}
-              </button>
-            ) : (
-              !showConnectForm && (
-                <button
-                  type="button"
-                  onClick={() => setShowConnectForm(true)}
-                  className="shrink-0 rounded-md bg-[color:var(--foreground)] px-4 py-2 text-sm font-medium text-[color:var(--background)]"
-                >
-                  {t("connect_aws_button")}
-                </button>
-              )
+            {!isConnected && showConnectForm && (
+              <ConnectAwsForm onConnected={() => { setShowConnectForm(false); reload(); }} onCancel={() => setShowConnectForm(false)} />
             )}
           </div>
         </section>
 
         {/* Stat tiles */}
-        <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <StatTile label={t("stat_spend")} value={formatUsd(spend)} />
+        <section className="dashboard-stats">
+          <StatTile label={t("stat_spend")} value={loading ? "—" : formatUsd(spend)} icon={Wallet} />
           <StatTile
             label={t("stat_savings")}
-            value={formatUsd(savings)}
-            delta={{
+            value={loading ? "—" : formatUsd(savings)}
+            icon={TrendingDown}
+            delta={loading ? undefined : {
               text: t("stat_savings_delta", { percent: savingsPercent }),
               direction: "down",
               isGood: true,
             }}
           />
-          <StatTile label={t("stat_recommendations")} value={String(recommendationsCount)} />
+          <StatTile label={t("stat_recommendations")} value={loading ? "—" : String(recommendationsCount)} icon={Layers3} />
         </section>
 
         {/* Breakdown */}
-        <section className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <section id="optimizations" className="dashboard-breakdown">
           <SavingsByCategory data={savingsByCategory} />
           <TopRecommendations data={topRecommendations} selectedIds={selectedIds} onToggle={toggleSelected} />
         </section>
 
         {/* Simulator */}
-        <section className="mt-6">
+        <section id="simulator" className="dashboard-simulator">
           <SavingsSimulator currentSpend={spend} selectedSavings={selectedSavings} selectedCount={selectedIds.size} />
         </section>
       </main>
 
-      <footer className="border-t border-[color:var(--border-hairline)] py-4">
-        <p className="mx-auto max-w-6xl px-6 text-xs text-[color:var(--text-muted)]">{t("footer")}</p>
+      <footer className="site-footer">
+        <div className="site-container footer-inner"><p>{t("landing_footer_note")}</p><span className="flex items-center gap-2"><ShieldCheck size={12} />{t("footer")}</span></div>
       </footer>
     </div>
   );
