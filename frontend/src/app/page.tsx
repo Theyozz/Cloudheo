@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   Archive,
   ArrowDown,
@@ -33,6 +34,7 @@ import { ProductPreview } from "@/components/product-preview";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme";
 import { LocalizedText, type TranslationKey } from "@/lib/i18n";
+import { verifyToken } from "@/lib/auth";
 
 const CONTACT_EMAIL = "theomaurin875@gmail.com";
 const CONTACT_SUBJECT = encodeURIComponent("Free AWS audit — Cloudheo");
@@ -101,6 +103,22 @@ function PrimaryButton({ children }: { children: React.ReactNode }) {
 }
 
 export default function LandingPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function check() {
+      const ok = await verifyToken();
+      if (!cancelled) setIsAuthenticated(ok);
+    }
+
+    check();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="landing-page">
       <a href="#main-content" className="skip-link"><LocalizedText id="skip_to_content" /></a>
@@ -117,7 +135,7 @@ export default function LandingPage() {
             <ThemeSwitcher />
             <LanguageSwitcher />
             <Link href="/app" className="button button-small button-outline">
-              <LocalizedText id="landing_nav_login" /><ArrowUpRight size={14} aria-hidden="true" />
+              <LocalizedText id={isAuthenticated ? "nav_dashboard" : "landing_nav_login"} /><ArrowUpRight size={14} aria-hidden="true" />
             </Link>
           </div>
         </div>

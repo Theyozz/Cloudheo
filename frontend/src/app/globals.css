@@ -2610,10 +2610,6 @@ svg {
     gap: 10px;
   }
 
-  .dashboard-api-status {
-    display: none;
-  }
-
   .dashboard-logout span {
     display: none;
   }

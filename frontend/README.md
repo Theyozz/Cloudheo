@@ -28,7 +28,6 @@ src/
 │   ├── reset-password/page.tsx  Set a new password from an emailed token
 │   └── globals.css        Design tokens (colors, light/dark mode) + Tailwind import
 ├── components/
-│   ├── backend-status.tsx     Live API connectivity indicator (polls GET /health)
 │   ├── language-switcher.tsx  EN/FR toggle
 │   ├── login-form.tsx          Sign in / create organization / forgot password, with a show/hide password toggle
 │   ├── reset-password-form.tsx New password + confirm, from a forgot-password email link

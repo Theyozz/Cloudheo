@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowUpRight, Cloud, Layers3, LayoutDashboard, LoaderCircle, LogOut, RefreshCw, ShieldCheck, SlidersHorizontal, Sparkles, TrendingDown, Wallet } from "lucide-react";
 import { Brand } from "@/components/brand";
-import { BackendStatus } from "@/components/backend-status";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme";
 import { LoginForm } from "@/components/login-form";
@@ -16,12 +15,6 @@ import { useLanguage, type TranslationKey } from "@/lib/i18n";
 import { formatUsd } from "@/lib/format";
 import { fetchDashboardSummary, disconnectAwsAccount, type DashboardSummary } from "@/lib/api";
 import { AuthRequiredError, logout, verifyToken } from "@/lib/auth";
-
-// Placeholder data shown until an AWS account is connected.
-const PLACEHOLDER_SPEND = 17_840;
-const PLACEHOLDER_SAVINGS = 3_240;
-const PLACEHOLDER_SAVINGS_PERCENT = 18.2;
-const PLACEHOLDER_RECOMMENDATIONS_COUNT = 34;
 
 const CATEGORY_LABEL_KEYS: Record<string, TranslationKey> = {
   RIGHTSIZING: "rec_category_rightsizing",
@@ -162,60 +155,12 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
 
   const isConnected = summary?.connected ?? false;
 
-  const placeholderSavingsByCategory = [
-    { category: "EC2", amount: 820 },
-    { category: "RDS", amount: 630 },
-    { category: t("category_non_production"), amount: 540 },
-    { category: "EBS", amount: 210 },
-  ];
+  const spend = isConnected ? summary!.monthly_spend : null;
+  const savings = isConnected ? summary!.potential_savings : null;
+  const savingsPercent = isConnected ? summary!.savings_percent : null;
+  const recommendationsCount = isConnected ? summary!.recommendations_count : null;
 
-  const placeholderTopRecommendations = [
-    {
-      resourceId: "i-0abc123",
-      resourceType: "EC2",
-      category: t("rec_category_rightsizing"),
-      monthlySaving: 79,
-      risk: "LOW" as const,
-      confidence: 0.94,
-      explainPayload: null,
-    },
-    {
-      resourceId: "db-staging-02",
-      resourceType: "RDS",
-      category: t("rec_category_non_prod_scheduling"),
-      monthlySaving: 54,
-      risk: "LOW" as const,
-      confidence: 0.88,
-      explainPayload: null,
-    },
-    {
-      resourceId: "vol-0def456",
-      resourceType: "EBS",
-      category: t("rec_category_unattached_volume"),
-      monthlySaving: 23,
-      risk: "LOW" as const,
-      confidence: 0.99,
-      explainPayload: null,
-    },
-    {
-      resourceId: "db-prod-reporting",
-      resourceType: "RDS",
-      category: t("rec_category_rightsizing"),
-      monthlySaving: 61,
-      risk: "MEDIUM" as const,
-      confidence: 0.76,
-      explainPayload: null,
-    },
-  ];
-
-  const spend = isConnected ? summary!.monthly_spend : PLACEHOLDER_SPEND;
-  const savings = isConnected ? summary!.potential_savings : PLACEHOLDER_SAVINGS;
-  const savingsPercent = isConnected ? summary!.savings_percent : PLACEHOLDER_SAVINGS_PERCENT;
-  const recommendationsCount = isConnected
-    ? summary!.recommendations_count
-    : PLACEHOLDER_RECOMMENDATIONS_COUNT;
-
-  const savingsByCategory = isConnected ? summary!.savings_by_category : placeholderSavingsByCategory;
+  const savingsByCategory = isConnected ? summary!.savings_by_category : [];
 
   const topRecommendations = isConnected
     ? summary!.top_recommendations.map((rec) => ({
@@ -227,7 +172,7 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
         confidence: rec.confidence,
         explainPayload: rec,
       }))
-    : placeholderTopRecommendations;
+    : [];
 
   const selectedSavings = topRecommendations
     .filter((rec) => selectedIds.has(rec.resourceId))
@@ -240,7 +185,6 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
         <div className="site-container header-inner">
           <Brand />
           <div className="dashboard-header-actions">
-            <div className="dashboard-api-status"><BackendStatus /></div>
             <ThemeSwitcher />
             <LanguageSwitcher />
             <button
@@ -272,7 +216,7 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
           </div>
           <div className="dashboard-heading-actions">
             <span className={isConnected ? "good-badge" : "soft-badge"} role="status">
-              {loading ? t("loading_text") : isConnected ? t("connected_badge", { account: summary!.aws_account_id ?? "" }) : t("sample_data_badge")}
+              {loading ? t("loading_text") : isConnected ? t("connected_badge", { account: summary!.aws_account_id ?? "" }) : t("dashboard_not_connected_badge")}
             </span>
             <button type="button" onClick={reload} disabled={loading || disconnecting} className="refresh-button" aria-label={t("dashboard_refresh")} title={t("dashboard_refresh")}><RefreshCw size={14} className={loading ? "spin" : undefined} /></button>
           </div>
@@ -286,8 +230,8 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
           <div className="connection-content">
             <div className="connection-row">
               <div className="connection-copy">
-                <h2>{isConnected ? t("dashboard_connection_active") : showConnectForm ? t("connect_aws_title") : t("dashboard_sample_title")}</h2>
-                <p>{isConnected || showConnectForm ? t("connect_aws_description") : t("dashboard_sample_description")}</p>
+                <h2>{isConnected ? t("dashboard_connection_active") : showConnectForm ? t("connect_aws_title") : t("dashboard_empty_title")}</h2>
+                <p>{isConnected || showConnectForm ? t("connect_aws_description") : t("dashboard_empty_description")}</p>
               </div>
               {isConnected ? (
                 <button type="button" onClick={handleDisconnect} disabled={disconnecting || loading} className="button button-outline button-small">
@@ -305,18 +249,18 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
 
         {/* Stat tiles */}
         <section className="dashboard-stats">
-          <StatTile label={t("stat_spend")} value={loading ? "—" : formatUsd(spend)} icon={Wallet} />
+          <StatTile label={t("stat_spend")} value={loading || spend === null ? "—" : formatUsd(spend)} icon={Wallet} />
           <StatTile
             label={t("stat_savings")}
-            value={loading ? "—" : formatUsd(savings)}
+            value={loading || savings === null ? "—" : formatUsd(savings)}
             icon={TrendingDown}
-            delta={loading ? undefined : {
-              text: t("stat_savings_delta", { percent: savingsPercent }),
+            delta={loading || savings === null ? undefined : {
+              text: t("stat_savings_delta", { percent: savingsPercent ?? 0 }),
               direction: "down",
               isGood: true,
             }}
           />
-          <StatTile label={t("stat_recommendations")} value={loading ? "—" : String(recommendationsCount)} icon={Layers3} />
+          <StatTile label={t("stat_recommendations")} value={loading || recommendationsCount === null ? "—" : String(recommendationsCount)} icon={Layers3} />
         </section>
 
         {/* Breakdown */}
@@ -325,10 +269,12 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
           <TopRecommendations data={topRecommendations} selectedIds={selectedIds} onToggle={toggleSelected} />
         </section>
 
-        {/* Simulator */}
-        <section id="simulator" className="dashboard-simulator">
-          <SavingsSimulator currentSpend={spend} selectedSavings={selectedSavings} selectedCount={selectedIds.size} />
-        </section>
+        {/* Simulator — only meaningful once there's something real to simulate */}
+        {isConnected && (
+          <section id="simulator" className="dashboard-simulator">
+            <SavingsSimulator currentSpend={spend ?? 0} selectedSavings={selectedSavings} selectedCount={selectedIds.size} />
+          </section>
+        )}
       </main>
 
       <footer className="site-footer">
