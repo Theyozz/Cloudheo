@@ -1,6 +1,13 @@
+from unittest.mock import patch
+
 from moto import mock_aws
 
 from tests.conftest import create_customer_role
+
+# moto's Cost Explorer backend doesn't implement get_savings_plans_coverage
+# (see tests/test_cost_explorer.py), so it's patched directly wherever a test
+# exercises the full /dashboard/summary endpoint under @mock_aws.
+NO_SAVINGS_PLAN_GAP = {"on_demand_cost": 0.0, "covered_cost": 0.0, "total_cost": 0.0, "coverage_percentage": 0.0}
 
 
 @mock_aws
@@ -15,7 +22,8 @@ def test_dashboard_summary_without_connection(client):
 
 
 @mock_aws
-def test_dashboard_summary_after_connecting(client):
+@patch("app.api.dashboard.get_savings_plans_coverage", return_value=NO_SAVINGS_PLAN_GAP)
+def test_dashboard_summary_after_connecting(mock_coverage, client):
     role_arn = create_customer_role()
     client.post("/aws/connect", json={"role_arn": role_arn, "region": "eu-west-3"})
 

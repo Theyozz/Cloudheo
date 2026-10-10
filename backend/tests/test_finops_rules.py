@@ -2,12 +2,17 @@ from app.services.finops.rules import (
     evaluate_all,
     evaluate_ebs_unattached,
     evaluate_ec2_rightsizing,
+    evaluate_gp2_to_gp3,
     evaluate_non_prod_scheduling,
     evaluate_orphaned_snapshots,
     evaluate_rds_rightsizing,
+    evaluate_savings_plan_coverage_gap,
     evaluate_stopped_instance_storage,
+    evaluate_unused_elastic_ips,
 )
 from app.services.finops.pricing import ebs_monthly_cost
+
+NO_SAVINGS_PLAN_GAP = {"on_demand_cost": 0.0, "covered_cost": 0.0, "total_cost": 0.0, "coverage_percentage": 0.0}
 
 
 def test_underutilized_running_instance_is_flagged():
@@ -118,7 +123,7 @@ def test_evaluate_all_sorts_by_savings_descending():
     ]
     volumes = [{"volume_id": "vol-big-waste", "size_gb": 1000, "attached": False}]
 
-    recs = evaluate_all(instances, volumes, [], [])
+    recs = evaluate_all(instances, volumes, [], [], [], NO_SAVINGS_PLAN_GAP)
 
     assert len(recs) == 2
     assert recs[0].estimated_savings >= recs[1].estimated_savings
@@ -262,3 +267,74 @@ def test_snapshot_of_existing_volume_is_not_flagged():
     snapshots = [{"snapshot_id": "snap-current", "volume_id": "vol-still-exists", "volume_size_gb": 20}]
 
     assert evaluate_orphaned_snapshots(volumes, snapshots) == []
+
+
+def test_unassociated_elastic_ip_is_flagged():
+    elastic_ips = [{"allocation_id": "eipalloc-1", "public_ip": "1.2.3.4", "associated": False}]
+
+    recs = evaluate_unused_elastic_ips(elastic_ips)
+
+    assert len(recs) == 1
+    assert recs[0].resource_type == "ELASTIC_IP"
+    assert recs[0].category == "UNUSED_ELASTIC_IP"
+    assert recs[0].estimated_savings > 0
+    assert recs[0].estimated_optimized_cost == 0.0
+
+
+def test_associated_elastic_ip_is_not_flagged():
+    elastic_ips = [{"allocation_id": "eipalloc-2", "public_ip": "1.2.3.5", "associated": True}]
+
+    assert evaluate_unused_elastic_ips(elastic_ips) == []
+
+
+def test_attached_gp2_volume_is_flagged_for_migration():
+    volumes = [{"volume_id": "vol-gp2", "size_gb": 100, "volume_type": "gp2", "attached": True}]
+
+    recs = evaluate_gp2_to_gp3(volumes)
+
+    assert len(recs) == 1
+    assert recs[0].category == "GP3_MIGRATION"
+    assert recs[0].estimated_savings > 0
+    assert recs[0].estimated_optimized_cost < recs[0].current_cost
+
+
+def test_unattached_gp2_volume_is_not_flagged_for_migration():
+    """Already covered by the unattached-volume delete recommendation, which
+    saves more — suggesting a type migration on it too would be noise."""
+    volumes = [{"volume_id": "vol-gp2-unused", "size_gb": 100, "volume_type": "gp2", "attached": False}]
+
+    assert evaluate_gp2_to_gp3(volumes) == []
+
+
+def test_gp3_volume_is_not_flagged_for_migration():
+    volumes = [{"volume_id": "vol-gp3", "size_gb": 100, "volume_type": "gp3", "attached": True}]
+
+    assert evaluate_gp2_to_gp3(volumes) == []
+
+
+def test_low_coverage_with_enough_spend_is_flagged():
+    coverage = {"on_demand_cost": 500.0, "covered_cost": 50.0, "total_cost": 550.0, "coverage_percentage": 9.1}
+
+    recs = evaluate_savings_plan_coverage_gap(coverage)
+
+    assert len(recs) == 1
+    assert recs[0].resource_type == "SAVINGS_PLAN"
+    assert recs[0].category == "SAVINGS_PLAN_COVERAGE_GAP"
+    assert recs[0].risk == "MEDIUM"
+    assert recs[0].current_cost == 500.0
+    assert recs[0].estimated_savings > 0
+    assert recs[0].estimated_optimized_cost < recs[0].current_cost
+
+
+def test_high_coverage_is_not_flagged():
+    coverage = {"on_demand_cost": 500.0, "covered_cost": 9500.0, "total_cost": 10000.0, "coverage_percentage": 95.0}
+
+    assert evaluate_savings_plan_coverage_gap(coverage) == []
+
+
+def test_small_on_demand_spend_is_not_flagged():
+    """Not worth suggesting a 1-year financial commitment for a handful of
+    dollars a month."""
+    coverage = {"on_demand_cost": 10.0, "covered_cost": 0.0, "total_cost": 10.0, "coverage_percentage": 0.0}
+
+    assert evaluate_savings_plan_coverage_gap(coverage) == []

@@ -16,6 +16,7 @@ def list_volumes(session: boto3.Session, region: str) -> list[dict]:
                 {
                     "volume_id": volume["VolumeId"],
                     "size_gb": volume["Size"],
+                    "volume_type": volume["VolumeType"],
                     "state": volume["State"],
                     "attached": len(attachments) > 0,
                     # A volume normally has at most one attachment (Multi-Attach

@@ -11,14 +11,20 @@ from app.services.finops.environment import is_non_production
 from app.services.finops.pricing import (
     EC2_DOWNSIZE,
     HOURS_PER_MONTH,
+    MIN_ON_DEMAND_COST_FOR_SAVINGS_PLAN,
     NON_PROD_SCHEDULE_DAYS_PER_WEEK,
     NON_PROD_SCHEDULE_HOURS_PER_DAY,
     RDS_DOWNSIZE,
+    SAVINGS_PLAN_COVERAGE_FLAG_THRESHOLD,
+    SAVINGS_PLAN_ESTIMATED_DISCOUNT,
+    ebs_gp2_monthly_cost,
     ebs_monthly_cost,
     ebs_snapshot_monthly_cost_upper_bound,
     ec2_monthly_cost,
+    elastic_ip_idle_monthly_cost,
     non_prod_scheduled_monthly_hours,
     rds_monthly_cost,
+    savings_plan_optimized_cost,
 )
 
 EC2_AVG_CPU_THRESHOLD = 10.0
@@ -230,6 +236,114 @@ def evaluate_orphaned_snapshots(ebs_volumes: list[dict], snapshots: list[dict]) 
     return recommendations
 
 
+def evaluate_unused_elastic_ips(elastic_ips: list[dict]) -> list[Recommendation]:
+    recommendations = []
+    monthly_cost = elastic_ip_idle_monthly_cost()
+
+    for eip in elastic_ips:
+        if eip.get("associated"):
+            continue
+
+        recommendations.append(
+            Recommendation(
+                resource_id=eip["allocation_id"],
+                resource_type="ELASTIC_IP",
+                category="UNUSED_ELASTIC_IP",
+                current_cost=monthly_cost,
+                estimated_optimized_cost=0.0,
+                estimated_savings=monthly_cost,
+                risk="LOW",
+                confidence=0.95,
+                title=f"Release unused Elastic IP {eip['public_ip']}",
+                description=(
+                    f"This Elastic IP ({eip['public_ip']}) isn't associated with any "
+                    f"running resource. AWS bills idle Elastic IPs hourly; releasing it "
+                    f"removes this cost entirely."
+                ),
+            )
+        )
+
+    return recommendations
+
+
+def evaluate_gp2_to_gp3(ebs_volumes: list[dict]) -> list[Recommendation]:
+    """Attached gp2 volumes only — an unattached gp2 volume is already
+    covered by the (strictly better) delete recommendation above, so
+    suggesting a type migration on it too would just be noise."""
+    recommendations = []
+
+    for volume in ebs_volumes:
+        if volume.get("volume_type") != "gp2" or not volume.get("attached"):
+            continue
+
+        current_cost = ebs_gp2_monthly_cost(volume["size_gb"])
+        optimized_cost = ebs_monthly_cost(volume["size_gb"])
+        savings = round(current_cost - optimized_cost, 2)
+        if savings <= 0:
+            continue
+
+        recommendations.append(
+            Recommendation(
+                resource_id=volume["volume_id"],
+                resource_type="EBS",
+                category="GP3_MIGRATION",
+                current_cost=current_cost,
+                estimated_optimized_cost=optimized_cost,
+                estimated_savings=savings,
+                risk="LOW",
+                confidence=0.95,
+                title=f"Migrate {volume['volume_id']} from gp2 to gp3",
+                description=(
+                    f"This {volume['size_gb']} GB volume still uses the older gp2 type. "
+                    f"gp3 offers the same baseline performance at a lower price per GB, "
+                    f"and the migration can be done live with no downtime."
+                ),
+            )
+        )
+
+    return recommendations
+
+
+def evaluate_savings_plan_coverage_gap(coverage: dict) -> list[Recommendation]:
+    """Unlike the other rules, this isn't a single misconfigured resource —
+    it's a financial-commitment opportunity across the whole account, so
+    there's at most one recommendation here, not one per resource. Risk is
+    MEDIUM rather than LOW because, unlike deleting or resizing a resource,
+    a Savings Plan commits spend for a fixed term and can't be undone."""
+    on_demand_cost = coverage["on_demand_cost"]
+    coverage_percentage = coverage["coverage_percentage"]
+
+    if on_demand_cost < MIN_ON_DEMAND_COST_FOR_SAVINGS_PLAN:
+        return []
+    if coverage_percentage >= SAVINGS_PLAN_COVERAGE_FLAG_THRESHOLD:
+        return []
+
+    optimized_cost = savings_plan_optimized_cost(on_demand_cost)
+    savings = round(on_demand_cost - optimized_cost, 2)
+
+    return [
+        Recommendation(
+            resource_id="compute-savings-plan",
+            resource_type="SAVINGS_PLAN",
+            category="SAVINGS_PLAN_COVERAGE_GAP",
+            current_cost=on_demand_cost,
+            estimated_optimized_cost=optimized_cost,
+            estimated_savings=savings,
+            risk="MEDIUM",
+            confidence=0.7,
+            title=f"Cover {on_demand_cost:.2f} USD/month of on-demand spend with a Savings Plan",
+            description=(
+                f"Only {coverage_percentage}% of your compute spend is covered by a "
+                f"Savings Plan over the observed period, leaving {on_demand_cost:.2f} "
+                f"USD/month on full on-demand pricing. A 1-year, no-upfront Compute "
+                f"Savings Plan typically cuts this by at least "
+                f"{int(SAVINGS_PLAN_ESTIMATED_DISCOUNT * 100)}% — but it's a committed "
+                f"spend for the term, so size it to your baseline usage, not your peak."
+            ),
+        )
+    ]
+
+
 def _non_prod_schedule_savings(current_cost: float) -> float:
     scheduled_fraction = non_prod_scheduled_monthly_hours() / HOURS_PER_MONTH
     return round(current_cost * (1 - scheduled_fraction), 2)
@@ -310,6 +424,8 @@ def evaluate_all(
     ebs_volumes: list[dict],
     rds_instances: list[dict],
     ebs_snapshots: list[dict],
+    elastic_ips: list[dict],
+    savings_plans_coverage: dict,
 ) -> list[Recommendation]:
     recommendations = (
         evaluate_ec2_rightsizing(ec2_instances)
@@ -318,5 +434,8 @@ def evaluate_all(
         + evaluate_stopped_instance_storage(ec2_instances, ebs_volumes)
         + evaluate_orphaned_snapshots(ebs_volumes, ebs_snapshots)
         + evaluate_non_prod_scheduling(ec2_instances, rds_instances)
+        + evaluate_unused_elastic_ips(elastic_ips)
+        + evaluate_gp2_to_gp3(ebs_volumes)
+        + evaluate_savings_plan_coverage_gap(savings_plans_coverage)
     )
     return sorted(recommendations, key=lambda r: r.estimated_savings, reverse=True)

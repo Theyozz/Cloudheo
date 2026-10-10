@@ -7,7 +7,7 @@ Risk = Literal["LOW", "MEDIUM", "HIGH"]
 
 class Recommendation(BaseModel):
     resource_id: str
-    resource_type: Literal["EC2", "EBS", "RDS"]
+    resource_type: Literal["EC2", "EBS", "RDS", "ELASTIC_IP", "SAVINGS_PLAN"]
     category: str
     current_cost: float
     estimated_optimized_cost: float

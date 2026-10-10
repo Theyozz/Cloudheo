@@ -9,7 +9,7 @@ from app.models.aws_account import AwsAccount
 from app.models.user import User
 from app.schemas.dashboard import CategorySaving, DashboardSummaryResponse
 from app.services.aws import ec2
-from app.services.aws.cost_explorer import default_date_range, get_cost_by_service
+from app.services.aws.cost_explorer import default_date_range, get_cost_by_service, get_savings_plans_coverage
 from app.services.aws.inventory import fetch_inventory
 from app.services.aws.sts import AssumeRoleError, assume_role, session_from_assumed_credentials
 from app.services.finops.rules import evaluate_all
@@ -36,6 +36,7 @@ def get_dashboard_summary(request: Request, db: Session = Depends(get_db), curre
         start_date, end_date = default_date_range()
         by_service = get_cost_by_service(session, start_date, end_date)
         monthly_spend = round(sum(item["amount"] for item in by_service), 2)
+        savings_plans_coverage = get_savings_plans_coverage(session, start_date, end_date)
 
         regions = [account.region] if account.region else ec2.list_regions(session)
         inventory = fetch_inventory(session, regions)
@@ -44,6 +45,8 @@ def get_dashboard_summary(request: Request, db: Session = Depends(get_db), curre
             inventory["ebs_volumes"],
             inventory["rds_instances"],
             inventory["ebs_snapshots"],
+            inventory["elastic_ips"],
+            savings_plans_coverage,
         )
     except (AssumeRoleError, ClientError):
         # The account was connected successfully before; a transient AWS

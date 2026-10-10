@@ -44,6 +44,11 @@ EC2_DOWNSIZE: dict[str, str] = {
 }
 
 EBS_GP3_PRICE_PER_GB_MONTH = 0.088
+EBS_GP2_PRICE_PER_GB_MONTH = 0.10
+
+# AWS bills an idle (unassociated) Elastic IP hourly; one attached to a
+# running resource is free.
+ELASTIC_IP_IDLE_HOURLY_PRICE = 0.005
 
 # AWS bills EBS snapshots on the actual unique data stored, which the
 # DescribeSnapshots API does not expose — only the source volume's full size
@@ -79,6 +84,24 @@ RDS_DOWNSIZE: dict[str, str] = {
 NON_PROD_SCHEDULE_HOURS_PER_DAY = 12
 NON_PROD_SCHEDULE_DAYS_PER_WEEK = 5
 
+# A Savings Plan commitment only pays off if there's enough steady on-demand
+# compute spend to commit against; flagging a tiny amount would just be noise.
+MIN_ON_DEMAND_COST_FOR_SAVINGS_PLAN = 50.0
+
+# Above this coverage, the account already has a Savings Plan doing its job —
+# not worth suggesting another one.
+SAVINGS_PLAN_COVERAGE_FLAG_THRESHOLD = 90.0
+
+# Conservative estimate for a 1-year, no-upfront Compute Savings Plan vs.
+# on-demand pricing. Real discounts go higher (up to ~30%) for a 3-year or
+# upfront-paid commitment, but the rule has no way to know which term the
+# customer would actually choose, so it stays on the safe side.
+SAVINGS_PLAN_ESTIMATED_DISCOUNT = 0.20
+
+
+def savings_plan_optimized_cost(on_demand_cost: float) -> float:
+    return round(on_demand_cost * (1 - SAVINGS_PLAN_ESTIMATED_DISCOUNT), 2)
+
 
 def ec2_monthly_cost(instance_type: str) -> float | None:
     hourly = EC2_HOURLY_PRICE.get(instance_type)
@@ -100,6 +123,14 @@ def ebs_monthly_cost(size_gb: int) -> float:
 
 def ebs_snapshot_monthly_cost_upper_bound(volume_size_gb: int) -> float:
     return round(volume_size_gb * EBS_SNAPSHOT_PRICE_PER_GB_MONTH, 2)
+
+
+def ebs_gp2_monthly_cost(size_gb: int) -> float:
+    return round(size_gb * EBS_GP2_PRICE_PER_GB_MONTH, 2)
+
+
+def elastic_ip_idle_monthly_cost() -> float:
+    return round(ELASTIC_IP_IDLE_HOURLY_PRICE * HOURS_PER_MONTH, 2)
 
 
 def non_prod_scheduled_monthly_hours() -> float:

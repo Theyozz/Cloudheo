@@ -1,8 +1,10 @@
 import { authFetch, parseErrorDetail } from "./auth";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
 export type ApiRecommendation = {
   resource_id: string;
-  resource_type: "EC2" | "EBS" | "RDS";
+  resource_type: "EC2" | "EBS" | "RDS" | "ELASTIC_IP" | "SAVINGS_PLAN";
   category: string;
   current_cost: number;
   estimated_optimized_cost: number;
@@ -28,6 +30,23 @@ export async function fetchDashboardSummary(): Promise<DashboardSummary> {
   const res = await authFetch("/dashboard/summary");
   if (!res.ok) throw new Error(await parseErrorDetail(res));
   return res.json();
+}
+
+export type MonthlySpendRange = "under_10k" | "10k_50k" | "50k_200k" | "over_200k";
+
+export async function requestAudit(payload: {
+  name: string;
+  company_name: string;
+  work_email: string;
+  monthly_spend_range: MonthlySpendRange;
+  message?: string;
+}): Promise<void> {
+  const res = await fetch(`${API_URL}/audit-leads`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await parseErrorDetail(res));
 }
 
 export async function connectAwsAccount(params: {

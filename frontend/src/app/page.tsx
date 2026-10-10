@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import {
   Archive,
   ArrowDown,
+  ArrowLeftRight,
   ArrowUpRight,
   Calculator,
   Check,
@@ -18,6 +19,7 @@ import {
   HardDrive,
   KeyRound,
   Moon,
+  Network,
   PlugZap,
   PowerOff,
   ScanLine,
@@ -25,20 +27,20 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   UserCheck,
+  Wallet,
   Workflow,
   type LucideIcon,
 } from "lucide-react";
 import { Brand } from "@/components/brand";
 import { CloudOrbit } from "@/components/cloud-orbit";
 import { ProductPreview } from "@/components/product-preview";
+import { AuditLeadForm } from "@/components/audit-lead-form";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme";
 import { LocalizedText, type TranslationKey } from "@/lib/i18n";
 import { verifyToken } from "@/lib/auth";
 
-const CONTACT_EMAIL = "theomaurin875@gmail.com";
-const CONTACT_SUBJECT = encodeURIComponent("Free AWS audit — Cloudheo");
-const MAILTO = `mailto:${CONTACT_EMAIL}?subject=${CONTACT_SUBJECT}`;
+const AUDIT_FORM_ANCHOR = "#audit-request";
 
 type ContentItem = {
   titleKey: TranslationKey;
@@ -50,7 +52,9 @@ const SERVICES: { name: string; icon: LucideIcon }[] = [
   { name: "Amazon EC2", icon: Server },
   { name: "Amazon RDS", icon: Database },
   { name: "Amazon EBS", icon: HardDrive },
+  { name: "Elastic IP", icon: Network },
   { name: "EBS Snapshots", icon: Archive },
+  { name: "Savings Plans", icon: Wallet },
 ];
 
 const FINDINGS: (ContentItem & { services: string })[] = [
@@ -59,6 +63,9 @@ const FINDINGS: (ContentItem & { services: string })[] = [
   { titleKey: "landing_finding_unattached_title", descKey: "landing_finding_unattached_desc", icon: HardDrive, services: "EBS" },
   { titleKey: "landing_finding_stopped_title", descKey: "landing_finding_stopped_desc", icon: PowerOff, services: "EC2 · EBS" },
   { titleKey: "landing_finding_snapshot_title", descKey: "landing_finding_snapshot_desc", icon: Archive, services: "EBS" },
+  { titleKey: "landing_finding_eip_title", descKey: "landing_finding_eip_desc", icon: Network, services: "Elastic IP" },
+  { titleKey: "landing_finding_gp3_title", descKey: "landing_finding_gp3_desc", icon: ArrowLeftRight, services: "EBS" },
+  { titleKey: "landing_finding_savingsplan_title", descKey: "landing_finding_savingsplan_desc", icon: Wallet, services: "Savings Plans" },
 ];
 
 const STEPS: ContentItem[] = [
@@ -96,8 +103,8 @@ const FAQ: { questionKey: TranslationKey; answerKey: TranslationKey }[] = [
 
 function PrimaryButton({ children }: { children: React.ReactNode }) {
   return (
-    <a href={MAILTO} className="button button-primary">
-      {children}<ArrowUpRight size={16} aria-hidden="true" />
+    <a href={AUDIT_FORM_ANCHOR} className="button button-primary">
+      {children}<ArrowDown size={16} aria-hidden="true" />
     </a>
   );
 }
@@ -249,13 +256,13 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="final-cta site-container section-space">
+        <section id="audit-request" className="final-cta site-container section-space">
           <span className="cta-cloud" aria-hidden="true"><Cloud size={29} strokeWidth={1.4} /></span>
           <p className="eyebrow"><LocalizedText id="landing_final_eyebrow" /></p>
           <h2><LocalizedText id="landing_final_heading" /></h2>
           <p className="section-description"><LocalizedText id="landing_final_description" /></p>
-          <PrimaryButton><LocalizedText id="landing_cta_primary" /></PrimaryButton>
-          <span className="cta-reassurance"><ShieldCheck size={13} aria-hidden="true" /><LocalizedText id="landing_trust_readonly" /> · <LocalizedText id="landing_trust_keys" /></span>
+          <AuditLeadForm />
+          <span className="cta-reassurance mt-6"><ShieldCheck size={13} aria-hidden="true" /><LocalizedText id="landing_trust_readonly" /> · <LocalizedText id="landing_trust_keys" /></span>
         </section>
       </main>
 

@@ -142,6 +142,7 @@ API process):
 | `POST /aws/connect` | 20/hour | Each call performs a real AssumeRole against a customer AWS account |
 | `GET /dashboard/summary` | 30/minute | Each call makes several live AWS API calls (Cost Explorer, EC2/RDS/EBS) |
 | `POST /ai/explain` | 30/hour | Each call is a billed Claude API request |
+| `POST /audit-leads` | 5/hour | Public, unauthenticated form — spam / inbox flooding |
 
 ## API
 
@@ -199,9 +200,15 @@ Deterministic, not AI — every number is traceable back to AWS data
 | `STOPPED_INSTANCE_STORAGE` | EC2 | HIGH (suggested action is destructive) |
 | `ORPHANED_SNAPSHOT` | EBS | LOW |
 | `NON_PROD_SCHEDULING` | EC2, RDS | MEDIUM (changes behavior, needs validation) |
+| `UNUSED_ELASTIC_IP` | Elastic IP | LOW |
+| `GP3_MIGRATION` | EBS | LOW (live migration, no downtime) |
+| `SAVINGS_PLAN_COVERAGE_GAP` | account-wide | MEDIUM (financial commitment, not reversible) |
 
 Pricing is a static, documented approximation (`app/services/finops/pricing.py`)
 — swap for the AWS Pricing API once cent-level accuracy matters.
+`SAVINGS_PLAN_COVERAGE_GAP` is the one exception: it's driven by live Cost
+Explorer coverage data (`get_savings_plans_coverage`), not the static tables,
+since coverage is something only AWS itself tracks.
 
 ## AI explanation service
 

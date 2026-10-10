@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Box, CircleAlert, Database, HardDrive, ListChecks, LoaderCircle, Server, Sparkles, type LucideIcon } from "lucide-react";
+import { Box, CircleAlert, Database, HardDrive, ListChecks, LoaderCircle, Server, Sparkles, Wallet, type LucideIcon } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { formatUsd } from "@/lib/format";
 import { explainRecommendation, type ApiRecommendation } from "@/lib/api";
@@ -32,6 +32,7 @@ const RESOURCE_ICONS: Record<string, LucideIcon> = {
   EC2: Server,
   EBS: HardDrive,
   RDS: Database,
+  SAVINGS_PLAN: Wallet,
 };
 
 export function TopRecommendations({ data, selectedIds, onToggle }: TopRecommendationsProps) {

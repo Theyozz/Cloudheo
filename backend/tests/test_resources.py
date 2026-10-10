@@ -35,13 +35,14 @@ def test_list_instances_returns_launched_instance():
 @mock_aws
 def test_list_volumes_detects_unattached():
     client = boto3.client("ec2", region_name=REGION)
-    client.create_volume(Size=20, AvailabilityZone=f"{REGION}a")
+    client.create_volume(Size=20, AvailabilityZone=f"{REGION}a", VolumeType="gp2")
 
     session = boto3.Session(region_name=REGION)
     volumes = ebs.list_volumes(session, REGION)
 
     assert len(volumes) == 1
     assert volumes[0]["size_gb"] == 20
+    assert volumes[0]["volume_type"] == "gp2"
     assert volumes[0]["attached"] is False
     assert volumes[0]["attached_instance_id"] is None
 
@@ -62,6 +63,35 @@ def test_list_volumes_includes_attached_instance_id():
     attached = next(v for v in volumes if v["volume_id"] == volume["VolumeId"])
     assert attached["attached"] is True
     assert attached["attached_instance_id"] == instance["InstanceId"]
+
+
+@mock_aws
+def test_list_elastic_ips_detects_unassociated():
+    client = boto3.client("ec2", region_name=REGION)
+    client.allocate_address(Domain="vpc")
+
+    session = boto3.Session(region_name=REGION)
+    elastic_ips = ec2.list_elastic_ips(session, REGION)
+
+    assert len(elastic_ips) == 1
+    assert elastic_ips[0]["associated"] is False
+
+
+@mock_aws
+def test_list_elastic_ips_detects_associated():
+    client = boto3.client("ec2", region_name=REGION)
+    image_id = client.describe_images()["Images"][0]["ImageId"]
+    instance = client.run_instances(ImageId=image_id, MinCount=1, MaxCount=1, InstanceType="t3.micro")[
+        "Instances"
+    ][0]
+    address = client.allocate_address(Domain="vpc")
+    client.associate_address(InstanceId=instance["InstanceId"], AllocationId=address["AllocationId"])
+
+    session = boto3.Session(region_name=REGION)
+    elastic_ips = ec2.list_elastic_ips(session, REGION)
+
+    assert len(elastic_ips) == 1
+    assert elastic_ips[0]["associated"] is True
 
 
 @mock_aws

@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = ""
     EMAIL_FROM: str = "Cloudheo <onboarding@resend.dev>"
 
+    # Where Cloudheo is notified of a new free-audit lead from the landing
+    # page form (app/api/leads.py).
+    AUDIT_LEAD_NOTIFICATION_EMAIL: str = "theomaurin875@gmail.com"
+
     # Base URL of the frontend, used to build the link in reset-password emails.
     FRONTEND_URL: str = "http://localhost:3000"
 

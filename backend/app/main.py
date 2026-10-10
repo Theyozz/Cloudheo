@@ -10,6 +10,7 @@ from app.api.auth import router as auth_router
 from app.api.connect import router as connect_router
 from app.api.dashboard import router as dashboard_router
 from app.api.health import router as health_router
+from app.api.leads import router as leads_router
 from app.core.config import get_settings
 from app.core.rate_limit import limiter
 
@@ -45,3 +46,4 @@ app.include_router(connect_router)
 app.include_router(dashboard_router)
 app.include_router(ai_router)
 app.include_router(audit_router)
+app.include_router(leads_router)

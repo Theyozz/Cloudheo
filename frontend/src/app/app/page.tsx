@@ -22,6 +22,9 @@ const CATEGORY_LABEL_KEYS: Record<string, TranslationKey> = {
   NON_PROD_SCHEDULING: "rec_category_non_prod_scheduling",
   STOPPED_INSTANCE_STORAGE: "rec_category_stopped_instance_storage",
   ORPHANED_SNAPSHOT: "rec_category_orphaned_snapshot",
+  UNUSED_ELASTIC_IP: "rec_category_unused_elastic_ip",
+  GP3_MIGRATION: "rec_category_gp3_migration",
+  SAVINGS_PLAN_COVERAGE_GAP: "rec_category_savings_plan_coverage_gap",
 };
 
 export default function DashboardPage() {

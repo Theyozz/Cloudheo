@@ -41,3 +41,32 @@ def get_cost_by_service(session: boto3.Session, start_date: str, end_date: str) 
         for service, amount in sorted(totals_by_service.items(), key=lambda kv: kv[1], reverse=True)
         if amount > 0
     ]
+
+
+def get_savings_plans_coverage(session: boto3.Session, start_date: str, end_date: str) -> dict:
+    """Aggregate Savings Plans coverage for the given period: how much of
+    compute spend is already covered by a Savings Plan vs. still paying
+    full on-demand price. Used by the coverage-gap FinOps rule."""
+    client = session.client("ce", region_name=COST_EXPLORER_REGION)
+    response = client.get_savings_plans_coverage(
+        TimePeriod={"Start": start_date, "End": end_date},
+        Granularity="MONTHLY",
+    )
+
+    on_demand_cost = 0.0
+    covered_cost = 0.0
+    total_cost = 0.0
+    for period in response["SavingsPlansCoverages"]:
+        coverage = period["Coverage"]
+        on_demand_cost += float(coverage["OnDemandCost"])
+        covered_cost += float(coverage["SpendCoveredBySavingsPlans"])
+        total_cost += float(coverage["TotalCost"])
+
+    coverage_percentage = round((covered_cost / total_cost) * 100, 1) if total_cost else 0.0
+
+    return {
+        "on_demand_cost": round(on_demand_cost, 2),
+        "covered_cost": round(covered_cost, 2),
+        "total_cost": round(total_cost, 2),
+        "coverage_percentage": coverage_percentage,
+    }
